@@ -1,18 +1,34 @@
-class AppConfig {
-  static const String _defaultApiBaseUrl = 'http://124.83.62.78:4000/api';
+import 'package:flutter/foundation.dart';
 
-  static final String apiBaseUrl = _normalizeBaseUrl(
-    const String.fromEnvironment(
-      'API_BASE_URL',
-      defaultValue: _defaultApiBaseUrl,
-    ),
+class AppConfig {
+  static const String productionApiBaseUrl =
+      'https://tarasense.dostcaraga.ph/api/mobile';
+
+  static String get apiBaseUrl => _normalizeBaseUrl(
+    const String.fromEnvironment('API_BASE_URL', defaultValue: ''),
+    fallback: _defaultApiBaseUrl(),
   );
 
-  static String _normalizeBaseUrl(String value) {
-    final trimmed = value.trim();
-    if (trimmed.isEmpty) {
-      return _defaultApiBaseUrl;
+  static String _defaultApiBaseUrl() {
+    // Mobile should use the same deployed backend as the web application.
+    // Use --dart-define=API_BASE_URL=... when you intentionally want a
+    // different environment such as local development or staging.
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+      case TargetPlatform.iOS:
+      case TargetPlatform.macOS:
+      case TargetPlatform.windows:
+      case TargetPlatform.linux:
+      case TargetPlatform.fuchsia:
+        return productionApiBaseUrl;
     }
-    return trimmed.endsWith('/') ? trimmed.substring(0, trimmed.length - 1) : trimmed;
+  }
+
+  static String _normalizeBaseUrl(String value, {required String fallback}) {
+    final String trimmed = value.trim();
+    final String selected = trimmed.isEmpty ? fallback : trimmed;
+    return selected.endsWith('/')
+        ? selected.substring(0, selected.length - 1)
+        : selected;
   }
 }

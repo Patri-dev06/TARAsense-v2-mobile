@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:riverpod/riverpod.dart';
+import 'package:tarasense_mobile/core/config/app_config.dart';
 import 'package:tarasense_mobile/core/storage/token_storage.dart';
 import 'package:tarasense_mobile/features/auth/data/auth_api.dart';
 import 'package:tarasense_mobile/features/auth/domain/auth_models.dart';
@@ -161,6 +162,16 @@ class AuthController extends Notifier<AuthState> {
       }
       if (error.response?.statusCode == 401) {
         return 'Invalid credentials.';
+      }
+      if (error.type == DioExceptionType.connectionError) {
+        final String message = error.message?.toLowerCase() ?? '';
+        if (message.contains('connection refused') ||
+            message.contains('failed host lookup') ||
+            message.contains('connection closed')) {
+          return 'Cannot connect to API at ${AppConfig.apiBaseUrl}. '
+              'Make sure the TARAsense API is running.';
+        }
+        return 'Cannot connect to API at ${AppConfig.apiBaseUrl}.';
       }
       return error.message ?? 'Request failed. Please try again.';
     }

@@ -5,8 +5,8 @@ import 'package:tarasense_mobile/features/auth/state/auth_providers.dart';
 import 'package:tarasense_mobile/features/auth/state/auth_state.dart';
 import 'package:tarasense_mobile/features/auth/ui/login_page.dart';
 import 'package:tarasense_mobile/features/auth/ui/register_page.dart';
-import 'package:tarasense_mobile/features/home/ui/home_page.dart';
 import 'package:tarasense_mobile/features/landing/ui/landing_page.dart';
+import 'package:tarasense_mobile/features/msme/ui/msme_workspace_page.dart';
 import 'package:tarasense_mobile/features/splash/ui/splash_page.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -24,7 +24,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/home', builder: (context, state) => const LandingPage()),
       GoRoute(
         path: '/dashboard',
-        builder: (context, state) => const HomePage(),
+        builder: (context, state) => const MsmeWorkspacePage(),
       ),
       GoRoute(
         path: '/api-test',

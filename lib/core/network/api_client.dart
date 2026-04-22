@@ -59,6 +59,21 @@ class ApiClient {
     return response.data ?? <String, dynamic>{};
   }
 
+  Future<Map<String, dynamic>> putJson(
+    String path, {
+    String? bearerToken,
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    final response = await _dio.put<Map<String, dynamic>>(
+      path,
+      data: data,
+      queryParameters: queryParameters,
+      options: _optionsForToken(bearerToken),
+    );
+    return response.data ?? <String, dynamic>{};
+  }
+
   Options _optionsForToken(String? bearerToken) {
     if (bearerToken == null || bearerToken.isEmpty) {
       return Options();

@@ -32,6 +32,7 @@ class AuthApi {
         'name': name.trim(),
         'email': email.trim().toLowerCase(),
         'password': password,
+        'role': 'MSME',
         if (organization != null && organization.trim().isNotEmpty)
           'organization': organization.trim(),
       },
@@ -68,4 +69,3 @@ class AuthApi {
     );
   }
 }
-
