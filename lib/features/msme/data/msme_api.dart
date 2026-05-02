@@ -55,7 +55,7 @@ class MsmeApi {
     String accessToken, {
     required Map<String, dynamic> payload,
   }) async {
-    final response = await _client.putJson(
+    final response = await _client.patchJson(
       '/profile',
       bearerToken: accessToken,
       data: payload,

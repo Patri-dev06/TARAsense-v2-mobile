@@ -7,12 +7,18 @@ class SystemApi {
   final Ref _read;
 
   Future<String> checkHealth() async {
-    final response = await _read.read(apiClientProvider).getJson('/health');
-    return (response['status'] ?? 'unknown').toString();
+    final accessToken = _read
+        .read(authControllerProvider)
+        .session
+        ?.tokens
+        .accessToken;
+    final response = await _read
+        .read(apiClientProvider)
+        .getJson('/auth/me', bearerToken: accessToken);
+    return response.isEmpty ? 'unknown' : 'ok';
   }
 }
 
 final systemApiProvider = Provider<SystemApi>((ref) {
   return SystemApi(ref);
 });
-

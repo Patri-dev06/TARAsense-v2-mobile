@@ -80,7 +80,7 @@ class LandingPage extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               Container(
-                padding: const EdgeInsets.fromLTRB(22, 28, 22, 24),
+                padding: const EdgeInsets.fromLTRB(22, 24, 22, 22),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     begin: Alignment.topLeft,
@@ -99,6 +99,13 @@ class LandingPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
+                    const TaraBrandLockup(
+                      markSize: 24,
+                      textSize: 28,
+                      taraFillColor: Colors.black,
+                      senseColor: Colors.white,
+                    ),
+                    const SizedBox(height: 18),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 14,
@@ -118,7 +125,7 @@ class LandingPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 18),
                     Text(
-                      'Create projects, configure tests, and coordinate sensory support.',
+                      'What is TARAsense?',
                       style: theme.textTheme.headlineMedium?.copyWith(
                         color: Colors.white,
                         height: 1.05,
@@ -126,11 +133,20 @@ class LandingPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     const Text(
-                      'The refreshed mobile UI follows the latest TARAsense web content with a cleaner, more focused layout.',
+                      'TARAsense is a sensory evaluation platform that helps MSMEs, FIC partners, and participants manage research activities, project setup, and product feedback in one place.',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 15,
                         height: 1.55,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'This mobile app gives you a simpler introduction first, then lets you continue to login or registration when you are ready.',
+                      style: TextStyle(
+                        color: Color(0xFFFDF2F8),
+                        fontSize: 14,
+                        height: 1.5,
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -162,7 +178,7 @@ class LandingPage extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               Text(
-                'Built for every workspace role',
+                'Built for every TARAsense role',
                 style: theme.textTheme.titleLarge,
               ),
               const SizedBox(height: 12),
@@ -174,7 +190,7 @@ class LandingPage extends StatelessWidget {
               ),
               const SizedBox(height: 18),
               Text(
-                'Why this redesign works better',
+                'What you can do inside TARAsense',
                 style: theme.textTheme.titleLarge,
               ),
               const SizedBox(height: 12),

@@ -64,11 +64,11 @@ class AuthScaffold extends StatelessWidget {
                   }
 
                   return SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(18, 22, 18, 28),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
                     child: Column(
                       children: <Widget>[
                         const _CompactBrandHeader(),
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 14),
                         _FormPanel(
                           title: title,
                           subtitle: subtitle,
@@ -94,7 +94,7 @@ class _CompactBrandHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(22, 26, 22, 24),
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
@@ -113,7 +113,12 @@ class _CompactBrandHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: const <Widget>[
-          TaraBrandLockup(markSize: 26, textSize: 26, senseColor: Colors.white),
+          TaraBrandLockup(
+            markSize: 26,
+            textSize: 26,
+            taraFillColor: Colors.black,
+            senseColor: Colors.white,
+          ),
           SizedBox(height: 18),
           Text(
             'Sensory research, project setup, and support coordination in one mobile workspace.',
@@ -168,6 +173,7 @@ class _BrandStoryPanel extends StatelessWidget {
           const TaraBrandLockup(
             markSize: 30,
             textSize: 30,
+            taraFillColor: Colors.black,
             senseColor: Colors.white,
           ),
           const Spacer(),
@@ -239,7 +245,7 @@ class _FormPanel extends StatelessWidget {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 30, 24, 26),
+        padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -253,16 +259,16 @@ class _FormPanel extends StatelessWidget {
                 letterSpacing: 1.1,
               ),
             ),
-            const SizedBox(height: 12),
-            Text(title, style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 10),
+            Text(title, style: Theme.of(context).textTheme.headlineSmall),
+            const SizedBox(height: 8),
             Text(
               subtitle,
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: TaraTheme.textSecondary),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 18),
             child,
           ],
         ),

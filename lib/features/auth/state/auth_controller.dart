@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:riverpod/riverpod.dart';
 import 'package:tarasense_mobile/core/config/app_config.dart';
+import 'package:tarasense_mobile/core/network/api_error_formatter.dart';
 import 'package:tarasense_mobile/core/storage/token_storage.dart';
 import 'package:tarasense_mobile/features/auth/data/auth_api.dart';
 import 'package:tarasense_mobile/features/auth/domain/auth_models.dart';
@@ -17,11 +18,18 @@ class AuthController extends Notifier<AuthState> {
   AuthState build() {
     _authApi = ref.watch(authApiProvider);
     _tokenStorage = ref.watch(tokenStorageProvider);
+    if (AppConfig.uiPreviewMode) {
+      return AuthState.authenticated(_previewSession);
+    }
     unawaited(restoreSession());
     return AuthState.initializing();
   }
 
   Future<void> restoreSession() async {
+    if (AppConfig.uiPreviewMode) {
+      state = AuthState.authenticated(_previewSession);
+      return;
+    }
     state = AuthState.initializing();
     try {
       final storedTokens = await _tokenStorage.readTokens();
@@ -49,6 +57,10 @@ class AuthController extends Notifier<AuthState> {
   }
 
   Future<void> login({required String email, required String password}) async {
+    if (AppConfig.uiPreviewMode) {
+      state = AuthState.authenticated(_previewSession);
+      return;
+    }
     state = state.copyWith(isBusy: true, clearError: true);
     try {
       final session = await _authApi.login(email: email, password: password);
@@ -63,14 +75,20 @@ class AuthController extends Notifier<AuthState> {
     required String name,
     required String email,
     required String password,
+    required String role,
     String? organization,
   }) async {
+    if (AppConfig.uiPreviewMode) {
+      state = AuthState.authenticated(_previewSession);
+      return;
+    }
     state = state.copyWith(isBusy: true, clearError: true);
     try {
       final session = await _authApi.register(
         name: name,
         email: email,
         password: password,
+        role: role,
         organization: organization,
       );
       await _tokenStorage.saveTokens(session.tokens);
@@ -81,6 +99,10 @@ class AuthController extends Notifier<AuthState> {
   }
 
   Future<void> refreshProfile() async {
+    if (AppConfig.uiPreviewMode) {
+      state = AuthState.authenticated(_previewSession);
+      return;
+    }
     final currentSession = state.session;
     if (currentSession == null) {
       return;
@@ -100,6 +122,10 @@ class AuthController extends Notifier<AuthState> {
   }
 
   Future<void> logout() async {
+    if (AppConfig.uiPreviewMode) {
+      state = AuthState.authenticated(_previewSession);
+      return;
+    }
     final currentSession = state.session;
     state = state.copyWith(isBusy: true, clearError: true);
 
@@ -156,12 +182,11 @@ class AuthController extends Notifier<AuthState> {
 
   String _errorMessage(Object error) {
     if (error is DioException) {
-      final data = error.response?.data;
-      if (data is Map<String, dynamic> && data['message'] != null) {
-        return data['message'].toString();
-      }
       if (error.response?.statusCode == 401) {
         return 'Invalid credentials.';
+      }
+      if (error.response?.statusCode == 404) {
+        return formatApiError(error, includeUri: true);
       }
       if (error.type == DioExceptionType.connectionError) {
         final String message = error.message?.toLowerCase() ?? '';
@@ -173,11 +198,26 @@ class AuthController extends Notifier<AuthState> {
         }
         return 'Cannot connect to API at ${AppConfig.apiBaseUrl}.';
       }
-      return error.message ?? 'Request failed. Please try again.';
+      return formatApiError(error, includeUri: true);
     }
-    if (error is FormatException) {
-      return error.message;
-    }
-    return 'Something went wrong. Please try again.';
+    final String message = formatApiError(error);
+    return message.isEmpty
+        ? 'Something went wrong. Please try again.'
+        : message;
   }
+
+  static const AuthSession _previewSession = AuthSession(
+    user: UserProfile(
+      id: 'preview-msme-user',
+      email: 'preview@tarasense.local',
+      name: 'Preview MSME',
+      role: 'MSME',
+      organization: 'Caraga Food Innovation Lab',
+    ),
+    tokens: AuthTokens(
+      accessToken: 'preview-access-token',
+      refreshToken: 'preview-refresh-token',
+      tokenType: 'Bearer',
+    ),
+  );
 }

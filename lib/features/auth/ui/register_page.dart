@@ -21,6 +21,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
+  String _selectedRole = 'MSME';
 
   @override
   void dispose() {
@@ -47,6 +48,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
               : _organizationController.text.trim(),
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
+          role: _selectedRole,
         );
   }
 
@@ -61,6 +63,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Account created successfully.')),
         );
+        context.go(next.session?.user.homePath ?? '/dashboard');
       } else if (next.errorMessage != null &&
           previous?.errorMessage != next.errorMessage) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -87,7 +90,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
               children: <Widget>[
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(18),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: TaraTheme.primaryTint,
                     borderRadius: BorderRadius.circular(24),
@@ -109,9 +112,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
                 Text('Full name', style: theme.textTheme.labelLarge),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 TextFormField(
                   controller: _nameController,
                   textInputAction: TextInputAction.next,
@@ -128,9 +131,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 14),
                 Text('Organization', style: theme.textTheme.labelLarge),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 TextFormField(
                   controller: _organizationController,
                   textInputAction: TextInputAction.next,
@@ -140,9 +143,37 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   ),
                   onTapOutside: (_) => FocusScope.of(context).unfocus(),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 14),
+                Text('Account type', style: theme.textTheme.labelLarge),
+                const SizedBox(height: 8),
+                SegmentedButton<String>(
+                  segments: const <ButtonSegment<String>>[
+                    ButtonSegment<String>(
+                      value: 'MSME',
+                      label: Text('MSME'),
+                      icon: Icon(Icons.storefront_outlined),
+                    ),
+                    ButtonSegment<String>(
+                      value: 'FIC',
+                      label: Text('FIC'),
+                      icon: Icon(Icons.science_outlined),
+                    ),
+                    ButtonSegment<String>(
+                      value: 'CONSUMER',
+                      label: Text('Tester'),
+                      icon: Icon(Icons.fact_check_outlined),
+                    ),
+                  ],
+                  selected: <String>{_selectedRole},
+                  onSelectionChanged: (Set<String> selected) {
+                    setState(() {
+                      _selectedRole = selected.first;
+                    });
+                  },
+                ),
+                const SizedBox(height: 14),
                 Text('Email address', style: theme.textTheme.labelLarge),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -167,9 +198,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 14),
                 Text('Password', style: theme.textTheme.labelLarge),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
@@ -208,10 +239,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF8FAFC),
                     borderRadius: BorderRadius.circular(22),
@@ -243,7 +274,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   ),
                 ),
                 if (authState.errorMessage != null) ...<Widget>[
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 14),
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(
@@ -264,7 +295,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 26),
+                const SizedBox(height: 18),
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
@@ -281,7 +312,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                         : const Text('Create account'),
                   ),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
@@ -289,7 +320,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     child: const Text('Back to log in'),
                   ),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 12),
                 Center(
                   child: Wrap(
                     alignment: WrapAlignment.center,

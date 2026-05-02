@@ -60,6 +60,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Logged in successfully.')),
         );
+        context.go(next.session?.user.homePath ?? '/dashboard');
       } else if (next.errorMessage != null &&
           previous?.errorMessage != next.errorMessage) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -85,7 +86,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               children: <Widget>[
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(18),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: TaraTheme.primaryTint,
                     borderRadius: BorderRadius.circular(24),
@@ -126,9 +127,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
                 Text('Email address', style: theme.textTheme.labelLarge),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -153,26 +154,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 18),
-                Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: Text(
-                        'Password',
-                        style: theme.textTheme.labelLarge,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        _showComingSoon(
-                          'Forgot password will be added to the mobile flow next.',
-                        );
-                      },
-                      child: const Text('Forgot password?'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 14),
+                Text('Password', style: theme.textTheme.labelLarge),
+                const SizedBox(height: 8),
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
@@ -211,7 +195,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 10),
                 InkWell(
                   onTap: () {
                     setState(() {
@@ -242,8 +226,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ),
                   ),
                 ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {
+                      _showComingSoon(
+                        'Forgot password will be added to the mobile flow next.',
+                      );
+                    },
+                    child: const Text('Forgot password?'),
+                  ),
+                ),
                 if (authState.errorMessage != null) ...<Widget>[
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 14),
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(
@@ -264,7 +259,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 26),
+                const SizedBox(height: 18),
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
@@ -281,7 +276,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         : const Text('Log in'),
                   ),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
@@ -289,7 +284,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     child: const Text('Create account'),
                   ),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 12),
                 Center(
                   child: Wrap(
                     alignment: WrapAlignment.center,

@@ -1,8 +1,15 @@
 import 'package:flutter/foundation.dart';
 
 class AppConfig {
+  // Opt-in UI preview mode: bypasses real authentication and uses local
+  // sample data when launched with --dart-define=UI_PREVIEW_MODE=true.
+  static const bool uiPreviewMode = bool.fromEnvironment(
+    'UI_PREVIEW_MODE',
+    defaultValue: false,
+  );
+
   static const String productionApiBaseUrl =
-      'https://tarasense.dostcaraga.ph/api/mobile';
+      'https://tarasense.dostcaraga.ph/api/mobile/v1';
 
   static String get apiBaseUrl => _normalizeBaseUrl(
     const String.fromEnvironment('API_BASE_URL', defaultValue: ''),

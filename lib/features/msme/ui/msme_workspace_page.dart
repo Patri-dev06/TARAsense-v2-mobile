@@ -1,8 +1,9 @@
 import 'dart:async';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:tarasense_mobile/core/config/app_config.dart';
+import 'package:tarasense_mobile/core/network/api_error_formatter.dart';
 import 'package:tarasense_mobile/core/theme/tara_theme.dart';
 import 'package:tarasense_mobile/core/widgets/tara_brand_lockup.dart';
 import 'package:tarasense_mobile/features/auth/state/auth_providers.dart';
@@ -31,10 +32,12 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
       TextEditingController(text: '30');
   final TextEditingController _customAttributeController =
       TextEditingController();
-  final TextEditingController _durationController =
-      TextEditingController(text: '1');
-  final TextEditingController _sampleCountController =
-      TextEditingController(text: '1');
+  final TextEditingController _durationController = TextEditingController(
+    text: '1',
+  );
+  final TextEditingController _sampleCountController = TextEditingController(
+    text: '1',
+  );
 
   int _currentTabIndex = 0;
   bool _isLoadingDashboard = true;
@@ -100,6 +103,10 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
   }
 
   Future<void> _loadWorkspace() async {
+    if (AppConfig.uiPreviewMode) {
+      _loadPreviewWorkspace();
+      return;
+    }
     await Future.wait(<Future<void>>[
       _loadDashboard(),
       _loadProfile(),
@@ -111,6 +118,16 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
       ref.read(authControllerProvider).session?.tokens.accessToken;
 
   Future<void> _loadDashboard({String? query}) async {
+    if (AppConfig.uiPreviewMode) {
+      setState(() {
+        _dashboard = _previewDashboard;
+        _dashboardError = null;
+        _isLoadingDashboard = false;
+        _searchQuery = query ?? _searchQuery;
+      });
+      return;
+    }
+
     final String? accessToken = _accessToken;
     if (accessToken == null) {
       return;
@@ -145,6 +162,17 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
   }
 
   Future<void> _loadProfile() async {
+    if (AppConfig.uiPreviewMode) {
+      final profile = _previewProfile;
+      _hydrateProfileForm(profile);
+      setState(() {
+        _profile = profile;
+        _profileError = null;
+        _isLoadingProfile = false;
+      });
+      return;
+    }
+
     final String? accessToken = _accessToken;
     if (accessToken == null) {
       return;
@@ -175,6 +203,17 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
   }
 
   Future<void> _loadBuilderOptions() async {
+    if (AppConfig.uiPreviewMode) {
+      final options = _previewBuilderOptions;
+      _hydrateStudyForm(options);
+      setState(() {
+        _builderOptions = options;
+        _builderError = null;
+        _isLoadingBuilder = false;
+      });
+      return;
+    }
+
     final String? accessToken = _accessToken;
     if (accessToken == null) {
       return;
@@ -258,6 +297,19 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
   }
 
   Future<void> _saveProfile() async {
+    if (AppConfig.uiPreviewMode) {
+      setState(() {
+        _profileError = null;
+        _isSavingProfile = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Preview mode: profile changes are local only.'),
+        ),
+      );
+      return;
+    }
+
     final String? accessToken = _accessToken;
     if (accessToken == null) {
       return;
@@ -266,22 +318,24 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
     setState(() => _isSavingProfile = true);
 
     try {
-      final profile = await ref.read(msmeApiProvider).updateProfile(
-        accessToken,
-        payload: <String, dynamic>{
-          'name': _profileNameController.text.trim(),
-          'organization': _profileOrganizationController.text.trim(),
-          'age': int.tryParse(_profileAgeController.text.trim()) ?? 0,
-          'gender': _selectedGender,
-          'location': _profileLocationController.text.trim(),
-          'occupation': _profileOccupationController.text.trim(),
-          'lifestyle': _selectedLifestyle.toList(),
-          'dietaryPrefs': _selectedDietaryPrefs.toList(),
-          'coffeeDrinker': _coffeeDrinker,
-          'snackConsumer': _snackConsumer,
-          'energyDrinkConsumer': _energyDrinkConsumer,
-        },
-      );
+      final profile = await ref
+          .read(msmeApiProvider)
+          .updateProfile(
+            accessToken,
+            payload: <String, dynamic>{
+              'name': _profileNameController.text.trim(),
+              'organization': _profileOrganizationController.text.trim(),
+              'age': int.tryParse(_profileAgeController.text.trim()) ?? 0,
+              'gender': _selectedGender,
+              'location': _profileLocationController.text.trim(),
+              'occupation': _profileOccupationController.text.trim(),
+              'lifestyle': _selectedLifestyle.toList(),
+              'dietaryPrefs': _selectedDietaryPrefs.toList(),
+              'coffeeDrinker': _coffeeDrinker,
+              'snackConsumer': _snackConsumer,
+              'energyDrinkConsumer': _energyDrinkConsumer,
+            },
+          );
 
       if (!mounted) {
         return;
@@ -311,6 +365,19 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
   }
 
   Future<void> _submitStudy() async {
+    if (AppConfig.uiPreviewMode) {
+      setState(() {
+        _builderError = null;
+        _currentTabIndex = 0;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Preview mode: study submission is disabled for now.'),
+        ),
+      );
+      return;
+    }
+
     final String? accessToken = _accessToken;
     final StudyBuilderOptionsData? options = _builderOptions;
     if (accessToken == null || options == null) {
@@ -330,7 +397,10 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
     }
 
     if (_attributes.where((attribute) => attribute.isJarTarget).length > 3) {
-      setState(() => _builderError = 'Only the top 3 attributes can be marked as priority.');
+      setState(
+        () => _builderError =
+            'Only the top 3 attributes can be marked as priority.',
+      );
       return;
     }
 
@@ -347,43 +417,51 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
       final int durationDays =
           int.tryParse(_durationController.text.trim()) ?? 1;
 
-      final result = await ref.read(msmeApiProvider).createStudy(
-        accessToken,
-        payload: <String, dynamic>{
-          'studyMode': _studyMode,
-          'sensoryStudyType': _studyMode == 'SENSORY' ? _sensoryStudyType : null,
-          'marketStudyType': _studyMode == 'MARKET'
-              ? 'PRODUCT_INTENT'
-              : null,
-          'sensoryMethod': _sensoryStudyType == 'CONSUMER_TEST'
-              ? 'Consumer Test'
-              : _sensoryStudyType.replaceAll('_', ' '),
-          'consumerObjective':
-              _studyMode == 'SENSORY' ? _consumerObjective : null,
-          'studyTitle': _buildStudyTitle(),
-          'purpose': _buildStudyPurpose(),
-          'facilityType': _selectedFacility,
-          'numberOfSamples': sampleCount,
-          'targetResponses': targetResponses,
-          'productName': _productNameController.text.trim(),
-          'categoryCode': profile.categoryCode,
-          'categoryLabel': profile.label,
-          'attributes': _attributes
-              .where((attribute) => attribute.name.trim().isNotEmpty)
-              .map((attribute) => attribute.toJson())
-              .toList(),
-          'sampleSetups': _sampleSetups
-              .take(sampleCount)
-              .map((_SampleSetupDraft setup) => setup.toJson())
-              .toList(),
-          'testingStartDate': _formatDateOnly(_testingStartDate),
-          'testingDurationDays': durationDays,
-          'sessionSlots': _sessions
-              .map((_SessionDraft session) => session.toJson(_testingStartDate))
-              .toList(),
-          'questions': const <String>[],
-        },
-      );
+      final result = await ref
+          .read(msmeApiProvider)
+          .createStudy(
+            accessToken,
+            payload: <String, dynamic>{
+              'studyMode': _studyMode,
+              'sensoryStudyType': _studyMode == 'SENSORY'
+                  ? _sensoryStudyType
+                  : null,
+              'marketStudyType': _studyMode == 'MARKET'
+                  ? 'PRODUCT_INTENT'
+                  : null,
+              'sensoryMethod': _sensoryStudyType == 'CONSUMER_TEST'
+                  ? 'Consumer Test'
+                  : _sensoryStudyType.replaceAll('_', ' '),
+              'consumerObjective': _studyMode == 'SENSORY'
+                  ? _consumerObjective
+                  : null,
+              'studyTitle': _buildStudyTitle(),
+              'purpose': _buildStudyPurpose(),
+              'facilityType': _selectedFacility,
+              'numberOfSamples': sampleCount,
+              'targetResponses': targetResponses,
+              'productName': _productNameController.text.trim(),
+              'categoryCode': profile.categoryCode,
+              'categoryLabel': profile.label,
+              'attributes': _attributes
+                  .where((attribute) => attribute.name.trim().isNotEmpty)
+                  .map((attribute) => attribute.toJson())
+                  .toList(),
+              'sampleSetups': _sampleSetups
+                  .take(sampleCount)
+                  .map((_SampleSetupDraft setup) => setup.toJson())
+                  .toList(),
+              'testingStartDate': _formatDateOnly(_testingStartDate),
+              'testingDurationDays': durationDays,
+              'sessionSlots': _sessions
+                  .map(
+                    (_SessionDraft session) =>
+                        session.toJson(_testingStartDate),
+                  )
+                  .toList(),
+              'questions': const <String>[],
+            },
+          );
 
       if (!mounted) {
         return;
@@ -480,14 +558,25 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
   }
 
   String _friendlyMessage(Object error) {
-    if (error is DioException) {
-      final dynamic data = error.response?.data;
-      if (data is Map && data['message'] != null) {
-        return data['message'].toString();
-      }
-      return error.message ?? 'Request failed.';
-    }
-    return error.toString().replaceFirst('Exception: ', '');
+    return formatApiError(error, includeUri: true);
+  }
+
+  void _loadPreviewWorkspace() {
+    final profile = _previewProfile;
+    final options = _previewBuilderOptions;
+    _hydrateProfileForm(profile);
+    _hydrateStudyForm(options);
+    setState(() {
+      _dashboard = _previewDashboard;
+      _profile = profile;
+      _builderOptions = options;
+      _dashboardError = null;
+      _profileError = null;
+      _builderError = null;
+      _isLoadingDashboard = false;
+      _isLoadingProfile = false;
+      _isLoadingBuilder = false;
+    });
   }
 
   @override
@@ -499,7 +588,8 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    final bool isSupportedRole = session.user.role.toUpperCase().contains('MSME') ||
+    final bool isSupportedRole =
+        session.user.role.toUpperCase().contains('MSME') ||
         session.user.role.toUpperCase().contains('ADMIN');
 
     if (!isSupportedRole) {
@@ -534,9 +624,8 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
               searchController: _searchController,
               currentTabIndex: _currentTabIndex,
               userName: session.user.name,
-              onSearchSubmitted: () => _loadDashboard(
-                query: _searchController.text.trim(),
-              ),
+              onSearchSubmitted: () =>
+                  _loadDashboard(query: _searchController.text.trim()),
               onLogout: authState.isBusy
                   ? null
                   : () => ref.read(authControllerProvider.notifier).logout(),
@@ -551,7 +640,8 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
                     dashboard: _dashboard,
                     onRefresh: () => _loadDashboard(),
                     onRetry: () => _loadDashboard(),
-                    onOpenCreateStudy: () => setState(() => _currentTabIndex = 1),
+                    onOpenCreateStudy: () =>
+                        setState(() => _currentTabIndex = 1),
                   ),
                   _CreateStudyTab(
                     isLoading: _isLoadingBuilder,
@@ -589,7 +679,8 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
                     onConsumerObjectiveChanged: (String value) {
                       SelectOption? option;
                       final List<SelectOption> objectives =
-                          _builderOptions?.consumerObjectives ?? <SelectOption>[];
+                          _builderOptions?.consumerObjectives ??
+                          <SelectOption>[];
                       for (final SelectOption item in objectives) {
                         if (item.value == value) {
                           option = item;
@@ -599,17 +690,17 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
                       setState(() {
                         _consumerObjective = value;
                         if (option?.defaultTarget != null) {
-                          _targetResponsesController.text =
-                              option!.defaultTarget!.toString();
+                          _targetResponsesController.text = option!
+                              .defaultTarget!
+                              .toString();
                         }
                       });
                     },
                     onRegionChanged: (String value) {
                       setState(() {
                         _selectedRegion = value;
-                        _selectedFacility = _builderOptions
-                            ?.facilitiesByRegion[value]
-                            ?.first;
+                        _selectedFacility =
+                            _builderOptions?.facilitiesByRegion[value]?.first;
                       });
                     },
                     onFacilityChanged: (String value) {
@@ -619,7 +710,7 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
                       CategoryProfileOption? profile;
                       final List<CategoryProfileOption> profiles =
                           _builderOptions?.categoryProfiles ??
-                              <CategoryProfileOption>[];
+                          <CategoryProfileOption>[];
                       for (final CategoryProfileOption item in profiles) {
                         if (item.key == value) {
                           profile = item;
@@ -638,19 +729,20 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
                             .map(
                               (MapEntry<int, StudyAttributeSeed> entry) =>
                                   _StudyAttributeDraft(
-                                name: entry.value.name,
-                                dimension: entry.value.dimension,
-                                isJarTarget: entry.key < 2,
-                                isCustom: false,
-                                actionable: true,
-                              ),
+                                    name: entry.value.name,
+                                    dimension: entry.value.dimension,
+                                    isJarTarget: entry.key < 2,
+                                    isCustom: false,
+                                    actionable: true,
+                                  ),
                             )
                             .toList();
                       });
                     },
-                    onAttributeChanged: (int index, _StudyAttributeDraft value) {
-                      setState(() => _attributes[index] = value);
-                    },
+                    onAttributeChanged:
+                        (int index, _StudyAttributeDraft value) {
+                          setState(() => _attributes[index] = value);
+                        },
                     onAddCustomAttribute: _addCustomAttribute,
                     onCustomDimensionChanged: (String value) {
                       setState(() => _customAttributeDimension = value);
@@ -774,8 +866,10 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
 
   void _addSession() {
     final StudyBuilderOptionsData? options = _builderOptions;
-    final SessionTemplateOption? template = options?.sessionTemplates.isNotEmpty == true
-        ? options!.sessionTemplates[_sessions.length % options.sessionTemplates.length]
+    final SessionTemplateOption? template =
+        options?.sessionTemplates.isNotEmpty == true
+        ? options!.sessionTemplates[_sessions.length %
+              options.sessionTemplates.length]
         : null;
     setState(() {
       _sessions.add(
@@ -793,7 +887,10 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
       return;
     }
     if (!_customAttributeActionable) {
-      setState(() => _builderError = 'Mark the custom attribute as actionable before adding it.');
+      setState(
+        () => _builderError =
+            'Mark the custom attribute as actionable before adding it.',
+      );
       return;
     }
     if (_attributes.any((_StudyAttributeDraft item) => item.isCustom)) {
@@ -801,7 +898,9 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
       return;
     }
     if (_attributes.length >= 5) {
-      setState(() => _builderError = 'A maximum of five attributes can be used.');
+      setState(
+        () => _builderError = 'A maximum of five attributes can be used.',
+      );
       return;
     }
     setState(() {
@@ -952,7 +1051,8 @@ class _DashboardTab extends StatelessWidget {
         children: <Widget>[
           _HeroWorkspaceCard(
             title: dashboard?.title ?? 'MSME Dashboard',
-            subtitle: dashboard?.subtitle ??
+            subtitle:
+                dashboard?.subtitle ??
                 'Create and manage studies, coordinate with FIC, and monitor response progress in one view.',
             actionLabel: 'Create Study',
             onAction: onOpenCreateStudy,
@@ -1015,7 +1115,9 @@ class _DashboardTab extends StatelessWidget {
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       const SizedBox(width: 10),
-                      _CounterBadge(value: dashboard!.studies.length.toString()),
+                      _CounterBadge(
+                        value: dashboard!.studies.length.toString(),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 14),
@@ -1138,7 +1240,8 @@ class _CreateStudyTab extends StatelessWidget {
         children: <Widget>[
           _HeroWorkspaceCard(
             title: options?.title ?? 'Create Study',
-            subtitle: options?.subtitle ??
+            subtitle:
+                options?.subtitle ??
                 'Configure Market or Sensory studies and generate a form with QR code.',
             actionLabel: isSubmitting ? 'Creating...' : 'Generate Study Form',
             onAction: isSubmitting ? null : () => unawaited(onSubmit()),
@@ -1154,7 +1257,8 @@ class _CreateStudyTab extends StatelessWidget {
             if (options != null) ...<Widget>[
               _SectionCard(
                 title: 'Study Type',
-                subtitle: 'Choose the MSME workflow and how you want to coordinate it.',
+                subtitle:
+                    'Choose the MSME workflow and how you want to coordinate it.',
                 child: Column(
                   children: <Widget>[
                     _ChoiceWrap(
@@ -1174,7 +1278,8 @@ class _CreateStudyTab extends StatelessWidget {
               const SizedBox(height: 14),
               _SectionCard(
                 title: 'Study Setup',
-                subtitle: 'Start with the facility, product, and sensory study details.',
+                subtitle:
+                    'Start with the facility, product, and sensory study details.',
                 child: Column(
                   children: <Widget>[
                     DropdownButtonFormField<String>(
@@ -1197,22 +1302,26 @@ class _CreateStudyTab extends StatelessWidget {
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       initialValue: selectedFacility,
-                      items: (selectedRegion == null
-                              ? <String>[]
-                              : options!.facilitiesByRegion[selectedRegion] ?? <String>[])
-                          .map(
-                            (String value) => DropdownMenuItem<String>(
-                              value: value,
-                              child: Text(value),
-                            ),
-                          )
-                          .toList(),
+                      items:
+                          (selectedRegion == null
+                                  ? <String>[]
+                                  : options!.facilitiesByRegion[selectedRegion] ??
+                                        <String>[])
+                              .map(
+                                (String value) => DropdownMenuItem<String>(
+                                  value: value,
+                                  child: Text(value),
+                                ),
+                              )
+                              .toList(),
                       onChanged: (String? value) {
                         if (value != null) {
                           onFacilityChanged(value);
                         }
                       },
-                      decoration: const InputDecoration(labelText: 'Facility Type'),
+                      decoration: const InputDecoration(
+                        labelText: 'Facility Type',
+                      ),
                     ),
                     const SizedBox(height: 12),
                     TextField(
@@ -1271,9 +1380,9 @@ class _CreateStudyTab extends StatelessWidget {
                           .map(
                             (CategoryProfileOption option) =>
                                 DropdownMenuItem<String>(
-                              value: option.key,
-                              child: Text(option.label),
-                            ),
+                                  value: option.key,
+                                  child: Text(option.label),
+                                ),
                           )
                           .toList(),
                       onChanged: (String? value) {
@@ -1291,7 +1400,8 @@ class _CreateStudyTab extends StatelessWidget {
               const SizedBox(height: 14),
               _SectionCard(
                 title: 'Choose What To Test',
-                subtitle: 'Pick the priority attributes that should drive the questionnaire.',
+                subtitle:
+                    'Pick the priority attributes that should drive the questionnaire.',
                 child: Column(
                   children: <Widget>[
                     Container(
@@ -1318,8 +1428,7 @@ class _CreateStudyTab extends StatelessWidget {
                     ),
                     const SizedBox(height: 14),
                     ...attributes.asMap().entries.map(
-                      (MapEntry<int, _StudyAttributeDraft> entry) =>
-                          Padding(
+                      (MapEntry<int, _StudyAttributeDraft> entry) => Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: _AttributeEditor(
                           attribute: entry.value,
@@ -1392,7 +1501,8 @@ class _CreateStudyTab extends StatelessWidget {
               const SizedBox(height: 14),
               _SectionCard(
                 title: 'Schedule And Capacity',
-                subtitle: 'Set the target responses and the testing sessions for this study.',
+                subtitle:
+                    'Set the target responses and the testing sessions for this study.',
                 child: Column(
                   children: <Widget>[
                     TextField(
@@ -1488,7 +1598,8 @@ class _CreateStudyTab extends StatelessWidget {
               const SizedBox(height: 14),
               _SectionCard(
                 title: 'Sample Setups',
-                subtitle: 'Describe the product variants or formulations used in the study.',
+                subtitle:
+                    'Describe the product variants or formulations used in the study.',
                 child: Column(
                   children: <Widget>[
                     TextField(
@@ -1595,7 +1706,8 @@ class _ProfileTab extends StatelessWidget {
         children: <Widget>[
           _HeroWorkspaceCard(
             title: profile?.title ?? 'My Profile',
-            subtitle: profile?.subtitle ??
+            subtitle:
+                profile?.subtitle ??
                 'Maintain your panelist data for better matching in future studies.',
             actionLabel: isSaving ? 'Saving...' : 'Save Profile',
             onAction: isSaving ? null : () => unawaited(onSave()),
@@ -1608,7 +1720,8 @@ class _ProfileTab extends StatelessWidget {
           else if (profile != null) ...<Widget>[
             _SectionCard(
               title: 'Basic Information',
-              subtitle: 'Keep the mobile profile aligned with your MSME account details.',
+              subtitle:
+                  'Keep the mobile profile aligned with your MSME account details.',
               child: Column(
                 children: <Widget>[
                   TextField(
@@ -1627,7 +1740,9 @@ class _ProfileTab extends StatelessWidget {
                   const SizedBox(height: 12),
                   TextField(
                     controller: organizationController,
-                    decoration: const InputDecoration(labelText: 'Organization'),
+                    decoration: const InputDecoration(
+                      labelText: 'Organization',
+                    ),
                   ),
                   const SizedBox(height: 12),
                   TextField(
@@ -1719,7 +1834,8 @@ class _ProfileTab extends StatelessWidget {
               child: profile!.history.isEmpty
                   ? const _EmptyCard(
                       title: 'No participation records yet',
-                      message: 'Your completed or assigned studies will appear here.',
+                      message:
+                          'Your completed or assigned studies will appear here.',
                     )
                   : Column(
                       children: profile!.history
@@ -1737,12 +1853,16 @@ class _ProfileTab extends StatelessWidget {
                                 children: <Widget>[
                                   Text(
                                     entry.studyTitle,
-                                    style: Theme.of(context).textTheme.titleMedium,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleMedium,
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
                                     '${entry.productName} • ${_humanizeLabel(entry.stage)} • ${_humanizeLabel(entry.status)}',
-                                    style: Theme.of(context).textTheme.bodySmall,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
                                   ),
                                   if (entry.completedAt != null) ...<Widget>[
                                     const SizedBox(height: 6),
@@ -1751,7 +1871,9 @@ class _ProfileTab extends StatelessWidget {
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodySmall
-                                          ?.copyWith(fontWeight: FontWeight.w700),
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                          ),
                                     ),
                                   ],
                                 ],
@@ -1768,7 +1890,10 @@ class _ProfileTab extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  _MetadataRow(label: 'Account Role', value: profile!.metadata.role),
+                  _MetadataRow(
+                    label: 'Account Role',
+                    value: profile!.metadata.role,
+                  ),
                   _MetadataRow(
                     label: 'Joined',
                     value: profile!.metadata.joinedAt == null
@@ -1779,7 +1904,9 @@ class _ProfileTab extends StatelessWidget {
                     label: 'Panelist profile created',
                     value: profile!.metadata.panelistCreatedAt == null
                         ? '-'
-                        : _formatShortDate(profile!.metadata.panelistCreatedAt!),
+                        : _formatShortDate(
+                            profile!.metadata.panelistCreatedAt!,
+                          ),
                   ),
                   _MetadataRow(
                     label: 'Last active',
@@ -1844,9 +1971,9 @@ class _HeroWorkspaceCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             title,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: Colors.white,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(color: Colors.white),
           ),
           const SizedBox(height: 8),
           Text(
@@ -1949,9 +2076,9 @@ class _StatCard extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             value,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontSize: 28,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontSize: 28),
           ),
           const SizedBox(height: 4),
           Text(
@@ -2052,7 +2179,9 @@ class _StudyCard extends StatelessWidget {
               value: study.progress,
               minHeight: 10,
               backgroundColor: TaraTheme.primarySoft,
-              valueColor: const AlwaysStoppedAnimation<Color>(TaraTheme.primary),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                TaraTheme.primary,
+              ),
             ),
           ),
           const SizedBox(height: 8),
@@ -2063,9 +2192,9 @@ class _StudyCard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             study.statusLabel,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
           ),
         ],
       ),
@@ -2372,17 +2501,14 @@ class _MetadataRow extends StatelessWidget {
         children: <Widget>[
           SizedBox(
             width: 150,
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+            child: Text(label, style: Theme.of(context).textTheme.bodySmall),
           ),
           Expanded(
             child: Text(
               value,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
           ),
         ],
@@ -2552,6 +2678,206 @@ class _ErrorBanner extends StatelessWidget {
   }
 }
 
+const MsmeDashboardData _previewDashboard = MsmeDashboardData(
+  workspaceLabel: 'UI Preview',
+  title: 'MSME Dashboard',
+  subtitle:
+      'Review the mobile workspace with sample studies while authentication and live APIs are paused.',
+  stats: DashboardStats(
+    ficBookings: 3,
+    totalStudies: 8,
+    totalResponses: 246,
+    activeStudies: 2,
+  ),
+  studies: <MsmeStudyItem>[
+    MsmeStudyItem(
+      id: 'preview-study-1',
+      title: 'Calamansi Spark Sensory Check',
+      productName: 'Calamansi Spark',
+      location: 'Butuan City FIC',
+      category: 'Beverage',
+      stage: 'Prototype Check',
+      status: 'RECRUITING',
+      sampleSize: 80,
+      responseCount: 42,
+      participantCount: 56,
+      statusLabel: 'Recruiting',
+    ),
+    MsmeStudyItem(
+      id: 'preview-study-2',
+      title: 'Cacao Nib Snack Preference Test',
+      productName: 'Cacao Nib Bites',
+      location: 'Caraga State University',
+      category: 'Snack',
+      stage: 'Refinement',
+      status: 'ACTIVE',
+      sampleSize: 60,
+      responseCount: 51,
+      participantCount: 58,
+      statusLabel: 'Active',
+    ),
+    MsmeStudyItem(
+      id: 'preview-study-3',
+      title: 'Turmeric Tea Market Readiness',
+      productName: 'Golden Root Tea',
+      location: 'DOST Caraga',
+      category: 'Beverage',
+      stage: 'Market Readiness',
+      status: 'COMPLETED',
+      sampleSize: 100,
+      responseCount: 100,
+      participantCount: 100,
+      statusLabel: 'Completed',
+    ),
+  ],
+);
+
+final MsmeProfileData _previewProfile = MsmeProfileData(
+  eyebrow: 'UI Preview',
+  title: 'My Profile',
+  subtitle:
+      'Sample MSME profile data for visual review. Changes are not saved while preview mode is enabled.',
+  name: 'Preview MSME',
+  email: 'preview@tarasense.local',
+  organization: 'Caraga Food Innovation Lab',
+  age: 32,
+  gender: 'PREFER_NOT_SAY',
+  location: 'Butuan City',
+  occupation: 'Product Developer',
+  lifestyle: const <String>['BUSY_PROFESSIONAL', 'HEALTH_CONSCIOUS'],
+  dietaryPrefs: const <String>['LOW_SUGAR'],
+  coffeeDrinker: true,
+  snackConsumer: true,
+  energyDrinkConsumer: false,
+  history: <ProfileHistoryItem>[
+    ProfileHistoryItem(
+      id: 'history-1',
+      studyTitle: 'Cacao Nib Snack Preference Test',
+      productName: 'Cacao Nib Bites',
+      stage: 'Refinement',
+      status: 'Completed',
+      completedAt: DateTime(2026, 4, 18),
+    ),
+    ProfileHistoryItem(
+      id: 'history-2',
+      studyTitle: 'Calamansi Spark Sensory Check',
+      productName: 'Calamansi Spark',
+      stage: 'Prototype Check',
+      status: 'In Progress',
+      completedAt: null,
+    ),
+  ],
+  metadata: ProfileMetadata(
+    role: 'MSME',
+    joinedAt: DateTime(2026, 1, 15),
+    panelistCreatedAt: DateTime(2026, 1, 16),
+    lastActive: DateTime(2026, 4, 29),
+  ),
+  lifestyleOptions: const <SelectOption>[
+    SelectOption(value: 'BUSY_PROFESSIONAL', label: 'Busy professional'),
+    SelectOption(value: 'HEALTH_CONSCIOUS', label: 'Health conscious'),
+    SelectOption(value: 'FOOD_ADVENTUROUS', label: 'Food adventurous'),
+    SelectOption(value: 'BUDGET_MINDED', label: 'Budget-minded'),
+  ],
+  dietaryOptions: const <SelectOption>[
+    SelectOption(value: 'LOW_SUGAR', label: 'Low sugar'),
+    SelectOption(value: 'LOW_SODIUM', label: 'Low sodium'),
+    SelectOption(value: 'VEGETARIAN', label: 'Vegetarian'),
+    SelectOption(value: 'NO_RESTRICTIONS', label: 'No restrictions'),
+  ],
+  genderOptions: const <SelectOption>[
+    SelectOption(value: 'FEMALE', label: 'Female'),
+    SelectOption(value: 'MALE', label: 'Male'),
+    SelectOption(value: 'PREFER_NOT_SAY', label: 'Prefer not to say'),
+  ],
+);
+
+const StudyBuilderOptionsData _previewBuilderOptions = StudyBuilderOptionsData(
+  workspaceLabel: 'UI Preview',
+  title: 'Create Study',
+  subtitle:
+      'Configure a sample sensory or market study without sending anything to the backend.',
+  studyTypes: <SelectOption>[
+    SelectOption(value: 'SENSORY', label: 'Sensory Study'),
+    SelectOption(value: 'MARKET', label: 'Market Study'),
+  ],
+  coordinationModes: <SelectOption>[
+    SelectOption(value: 'FIC', label: 'Book with FIC'),
+    SelectOption(value: 'SELF_MANAGED', label: 'Self-managed'),
+  ],
+  sensoryStudyTypes: <SelectOption>[
+    SelectOption(value: 'CONSUMER_TEST', label: 'Consumer Test'),
+    SelectOption(value: 'DESCRIPTIVE_TEST', label: 'Descriptive Test'),
+    SelectOption(value: 'DISCRIMINATION_TEST', label: 'Discrimination Test'),
+  ],
+  consumerObjectives: <SelectOption>[
+    SelectOption(
+      value: 'FAST_ITERATION',
+      label: 'Fast iteration',
+      defaultTarget: 30,
+    ),
+    SelectOption(
+      value: 'MARKET_READINESS',
+      label: 'Market readiness',
+      defaultTarget: 80,
+    ),
+    SelectOption(
+      value: 'PRODUCT_REFINEMENT',
+      label: 'Product refinement',
+      defaultTarget: 50,
+    ),
+  ],
+  attributeDimensions: <String>['Taste', 'Aroma', 'Texture', 'Appearance'],
+  categoryProfiles: <CategoryProfileOption>[
+    CategoryProfileOption(
+      key: 'beverage',
+      label: 'Beverage',
+      categoryCode: 'BEVERAGE',
+      attributes: <StudyAttributeSeed>[
+        StudyAttributeSeed(name: 'Sweetness', dimension: 'Taste'),
+        StudyAttributeSeed(name: 'Sourness', dimension: 'Taste'),
+        StudyAttributeSeed(name: 'Aroma intensity', dimension: 'Aroma'),
+        StudyAttributeSeed(name: 'Color appeal', dimension: 'Appearance'),
+      ],
+    ),
+    CategoryProfileOption(
+      key: 'snack',
+      label: 'Snack',
+      categoryCode: 'SNACK',
+      attributes: <StudyAttributeSeed>[
+        StudyAttributeSeed(name: 'Crunchiness', dimension: 'Texture'),
+        StudyAttributeSeed(name: 'Saltiness', dimension: 'Taste'),
+        StudyAttributeSeed(name: 'Aftertaste', dimension: 'Taste'),
+        StudyAttributeSeed(name: 'Visual appeal', dimension: 'Appearance'),
+      ],
+    ),
+  ],
+  regions: <String>['Caraga', 'Northern Mindanao'],
+  facilitiesByRegion: <String, List<String>>{
+    'Caraga': <String>['Butuan City FIC', 'DOST Caraga Sensory Lab'],
+    'Northern Mindanao': <String>['CDO Food Innovation Center'],
+  },
+  questionnaireNotes: <String>[
+    'Use clear sensory attribute labels.',
+    'Keep participant instructions concise.',
+    'Review allergens before publishing.',
+  ],
+  sessionTemplates: <SessionTemplateOption>[
+    SessionTemplateOption(
+      label: 'Morning Session',
+      startTime: '09:00',
+      endTime: '11:30',
+      capacity: 15,
+    ),
+    SessionTemplateOption(
+      label: 'Afternoon Session',
+      startTime: '13:30',
+      endTime: '16:00',
+      capacity: 15,
+    ),
+  ],
+);
+
 class _StudyAttributeDraft {
   const _StudyAttributeDraft({
     required this.name,
@@ -2675,7 +3001,9 @@ class _SampleSetupDraft {
 
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
-      'description': description.trim().isEmpty ? 'Sample setup' : description.trim(),
+      'description': description.trim().isEmpty
+          ? 'Sample setup'
+          : description.trim(),
       'ingredient': ingredient.trim(),
       'allergen': allergen.trim().isEmpty ? 'N/A' : allergen.trim(),
     };
@@ -2736,7 +3064,9 @@ String _formatShortDate(DateTime value) {
 }
 
 String _formatLongDateTime(DateTime value) {
-  final int hour = value.hour > 12 ? value.hour - 12 : (value.hour == 0 ? 12 : value.hour);
+  final int hour = value.hour > 12
+      ? value.hour - 12
+      : (value.hour == 0 ? 12 : value.hour);
   final String minute = value.minute.toString().padLeft(2, '0');
   final String period = value.hour >= 12 ? 'PM' : 'AM';
   return '${value.month}/${value.day}/${value.year}, $hour:$minute $period';

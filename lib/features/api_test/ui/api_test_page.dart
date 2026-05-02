@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dio/dio.dart';
+import 'package:tarasense_mobile/core/network/api_error_formatter.dart';
 import 'package:tarasense_mobile/features/api_test/state/api_test_providers.dart';
 
 class ApiTestPage extends ConsumerStatefulWidget {
@@ -45,20 +45,7 @@ class _ApiTestPageState extends ConsumerState<ApiTestPage> {
   }
 
   String _formatError(Object error) {
-    if (error is DioException) {
-      final statusCode = error.response?.statusCode;
-      final statusText = statusCode == null ? '' : 'HTTP $statusCode';
-      final message = error.message?.trim() ?? '';
-      final details = <String>[
-        if (statusText.isNotEmpty) statusText,
-        if (message.isNotEmpty) message,
-      ];
-      if (details.isEmpty) {
-        return 'Request failed';
-      }
-      return details.join(' | ');
-    }
-    return error.toString();
+    return formatApiError(error, includeUri: true);
   }
 
   @override
@@ -71,102 +58,38 @@ class _ApiTestPageState extends ConsumerState<ApiTestPage> {
         padding: const EdgeInsets.all(16),
         children: [
           const Text(
-            'Tap buttons to test API endpoints',
+            'Tap buttons to test the read-only mobile API endpoints from the web system list. Login, register, refresh, logout, create study, and profile update are exercised by their actual app flows.',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 20),
 
-          // Auth endpoints
           _buildSection('Authentication Endpoints'),
           _buildTestButton(
             'GET /auth/me',
             'auth_me',
             () => _testEndpoint('auth_me', api.testAuthMe),
           ),
-          _buildTestButton(
-            'GET /auth/introspect',
-            'auth_introspect',
-            () => _testEndpoint('auth_introspect', api.testAuthIntrospect),
-          ),
 
-          // Study endpoints
-          _buildSection('Study Management'),
+          _buildSection('MSME'),
           _buildTestButton(
-            'POST /studies/new',
-            'studies_new',
-            () => _testEndpoint('studies_new', api.testStudiesNew),
+            'GET /msme/dashboard',
+            'msme_dashboard',
+            () => _testEndpoint('msme_dashboard', api.testMsmeDashboard),
           ),
           _buildTestButton(
-            'GET /studies/{id}/analysis',
-            'studies_analysis',
+            'GET /msme/study-builder-options',
+            'study_builder_options',
             () => _testEndpoint(
-              'studies_analysis',
-              () => api.testStudiesAnalysis('test-id'),
-            ),
-          ),
-          _buildTestButton(
-            'GET /studies/{id}/master-list',
-            'studies_master_list',
-            () => _testEndpoint(
-              'studies_master_list',
-              () => api.testStudiesMasterList('test-id'),
-            ),
-          ),
-          _buildTestButton(
-            'GET /studies/{id}/responses',
-            'studies_responses',
-            () => _testEndpoint(
-              'studies_responses',
-              () => api.testStudiesResponses('test-id'),
+              'study_builder_options',
+              api.testStudyBuilderOptions,
             ),
           ),
 
-          // FIC endpoints
-          _buildSection('FIC Management'),
-          _buildTestButton(
-            'GET /fic-availability/available-fics',
-            'fic_available',
-            () => _testEndpoint('fic_available', api.testFICAvailable),
-          ),
-          _buildTestButton(
-            'GET /fic-availability/calendar/{id}',
-            'fic_calendar',
-            () => _testEndpoint(
-              'fic_calendar',
-              () => api.testFICCalendar('test-fic-id'),
-            ),
-          ),
-
-          // Participant endpoints
-          _buildSection('Participant Management'),
-          _buildTestButton(
-            'POST /participants/{id}/confirm',
-            'participants_confirm',
-            () => _testEndpoint(
-              'participants_confirm',
-              () => api.testParticipantsConfirm('test-participant-id'),
-            ),
-          ),
-
-          // Profile and Jobs
-          _buildSection('User Management'),
+          _buildSection('Profile'),
           _buildTestButton(
             'GET /profile',
             'profile',
             () => _testEndpoint('profile', api.testProfile),
-          ),
-          _buildTestButton(
-            'GET /jobs/',
-            'jobs',
-            () => _testEndpoint('jobs', api.testJobs),
-          ),
-
-          // Health
-          _buildSection('System'),
-          _buildTestButton(
-            'GET /health',
-            'health',
-            () => _testEndpoint('health', api.testHealth),
           ),
         ],
       ),

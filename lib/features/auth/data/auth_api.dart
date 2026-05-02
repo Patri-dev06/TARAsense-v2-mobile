@@ -24,6 +24,7 @@ class AuthApi {
     required String name,
     required String email,
     required String password,
+    required String role,
     String? organization,
   }) async {
     final response = await _client.postJson(
@@ -32,7 +33,7 @@ class AuthApi {
         'name': name.trim(),
         'email': email.trim().toLowerCase(),
         'password': password,
-        'role': 'MSME',
+        'role': role,
         if (organization != null && organization.trim().isNotEmpty)
           'organization': organization.trim(),
       },

@@ -1,74 +1,33 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tarasense_mobile/core/network/api_client.dart';
+import 'package:tarasense_mobile/features/auth/state/auth_providers.dart';
 
 class ApiTestApi {
-  ApiTestApi(this._client);
+  ApiTestApi(this._client, this._ref);
 
   final ApiClient _client;
+  final Ref _ref;
 
-  // Auth endpoints
   Future<Map<String, dynamic>> testAuthMe() async {
-    return await _client.getJson('/auth/me');
+    return _get('/auth/me');
   }
 
-  Future<Map<String, dynamic>> testAuthIntrospect() async {
-    return await _client.getJson('/auth/introspect');
-  }
-
-  // Study endpoints
-  Future<Map<String, dynamic>> testStudiesNew() async {
-    return await _client.postJson(
-      '/studies/new',
-      data: {
-        'title': 'Test Study',
-        'description': 'API Test Study',
-        'type': 'consumer_test',
-      },
-    );
-  }
-
-  Future<Map<String, dynamic>> testStudiesAnalysis(String studyId) async {
-    return await _client.getJson('/studies/$studyId/analysis');
-  }
-
-  Future<Map<String, dynamic>> testStudiesMasterList(String studyId) async {
-    return await _client.getJson('/studies/$studyId/master-list');
-  }
-
-  Future<Map<String, dynamic>> testStudiesResponses(String studyId) async {
-    return await _client.getJson('/studies/$studyId/responses');
-  }
-
-  // FIC endpoints
-  Future<Map<String, dynamic>> testFICAvailable() async {
-    return await _client.getJson('/fic-availability/available-fics');
-  }
-
-  Future<Map<String, dynamic>> testFICCalendar(String ficUserId) async {
-    return await _client.getJson('/fic-availability/calendar/$ficUserId');
-  }
-
-  // Participant endpoints
-  Future<Map<String, dynamic>> testParticipantsConfirm(
-    String participantId,
-  ) async {
-    return await _client.postJson(
-      '/participants/$participantId/confirm',
-      data: {},
-    );
-  }
-
-  // Profile endpoint
   Future<Map<String, dynamic>> testProfile() async {
-    return await _client.getJson('/profile');
+    return _get('/profile');
   }
 
-  // Jobs endpoint
-  Future<Map<String, dynamic>> testJobs() async {
-    return await _client.getJson('/jobs/');
+  Future<Map<String, dynamic>> testMsmeDashboard() async {
+    return _get('/msme/dashboard');
   }
 
-  // Health check
-  Future<Map<String, dynamic>> testHealth() async {
-    return await _client.getJson('/health');
+  Future<Map<String, dynamic>> testStudyBuilderOptions() async {
+    return _get('/msme/study-builder-options');
+  }
+
+  String? get _accessToken =>
+      _ref.read(authControllerProvider).session?.tokens.accessToken;
+
+  Future<Map<String, dynamic>> _get(String path) {
+    return _client.getJson(path, bearerToken: _accessToken);
   }
 }

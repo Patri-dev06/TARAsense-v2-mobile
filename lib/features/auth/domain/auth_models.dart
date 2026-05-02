@@ -13,6 +13,32 @@ class UserProfile {
   final String role;
   final String? organization;
 
+  String get normalizedRole => role.trim().toUpperCase();
+
+  bool get isMsme => normalizedRole.contains('MSME');
+
+  bool get isFic =>
+      normalizedRole == 'FIC' ||
+      normalizedRole.contains('FOOD_INNOVATION') ||
+      normalizedRole.contains('FOOD INNOVATION');
+
+  bool get isTester =>
+      normalizedRole == 'CONSUMER' ||
+      normalizedRole == 'TESTER' ||
+      normalizedRole == 'PANELIST' ||
+      normalizedRole.contains('CONSUMER') ||
+      normalizedRole.contains('TESTER');
+
+  String get homePath {
+    if (isFic) {
+      return '/fic';
+    }
+    if (isTester) {
+      return '/tester';
+    }
+    return '/dashboard';
+  }
+
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
       id: (json['id'] ?? '').toString(),
