@@ -7,12 +7,20 @@ class AuthScaffold extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.child,
+    this.isLoading = false,
+    this.loadingMessage = 'Please wait...',
+    this.isSuccess = false,
+    this.successMessage = 'Success.',
     super.key,
   });
 
   final String title;
   final String subtitle;
   final Widget child;
+  final bool isLoading;
+  final String loadingMessage;
+  final bool isSuccess;
+  final String successMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -80,8 +88,237 @@ class AuthScaffold extends StatelessWidget {
                 },
               ),
             ),
+            if (isLoading) _AuthLoadingScreen(message: loadingMessage),
+            if (!isLoading && isSuccess)
+              _AuthSuccessScreen(message: successMessage),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class AuthErrorMessage extends StatelessWidget {
+  const AuthErrorMessage({required this.message, super.key});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF1F2),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFECDD3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const Icon(
+            Icons.error_outline_rounded,
+            color: TaraTheme.roseText,
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: TaraTheme.roseText,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AuthLoadingScreen extends StatefulWidget {
+  const _AuthLoadingScreen({required this.message});
+
+  final String message;
+
+  @override
+  State<_AuthLoadingScreen> createState() => _AuthLoadingScreenState();
+}
+
+class _AuthLoadingScreenState extends State<_AuthLoadingScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 850),
+    )..repeat(reverse: true);
+    _scale = Tween<double>(begin: 0.92, end: 1.08).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: Stack(
+        children: <Widget>[
+          ModalBarrier(
+            dismissible: false,
+            color: Colors.white.withValues(alpha: 0.9),
+          ),
+          Center(
+            child: Container(
+              width: 260,
+              padding: const EdgeInsets.fromLTRB(24, 26, 24, 24),
+              decoration: BoxDecoration(
+                color: TaraTheme.surface,
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: TaraTheme.border),
+                boxShadow: const <BoxShadow>[
+                  BoxShadow(
+                    color: Color(0x180F172A),
+                    blurRadius: 30,
+                    offset: Offset(0, 18),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  ScaleTransition(
+                    scale: _scale,
+                    child: SizedBox(
+                      height: 58,
+                      width: 58,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: <Widget>[
+                          const SizedBox.expand(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 4,
+                              color: TaraTheme.primary,
+                            ),
+                          ),
+                          Container(
+                            height: 34,
+                            width: 34,
+                            decoration: BoxDecoration(
+                              color: TaraTheme.primaryTint,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: const Icon(
+                              Icons.lock_open_rounded,
+                              color: TaraTheme.primary,
+                              size: 18,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    widget.message,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: TaraTheme.textPrimary,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Connecting to TARAsense...',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AuthSuccessScreen extends StatelessWidget {
+  const _AuthSuccessScreen({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: Stack(
+        children: <Widget>[
+          ModalBarrier(
+            dismissible: false,
+            color: Colors.white.withValues(alpha: 0.92),
+          ),
+          Center(
+            child: Container(
+              width: 280,
+              padding: const EdgeInsets.fromLTRB(24, 26, 24, 24),
+              decoration: BoxDecoration(
+                color: TaraTheme.surface,
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: TaraTheme.border),
+                boxShadow: const <BoxShadow>[
+                  BoxShadow(
+                    color: Color(0x180F172A),
+                    blurRadius: 30,
+                    offset: Offset(0, 18),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Container(
+                    height: 58,
+                    width: 58,
+                    decoration: BoxDecoration(
+                      color: TaraTheme.mint,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: const Icon(
+                      Icons.check_rounded,
+                      color: TaraTheme.mintText,
+                      size: 34,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    message,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: TaraTheme.textPrimary,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Preparing your workspace...',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -116,7 +353,7 @@ class _CompactBrandHeader extends StatelessWidget {
           TaraBrandLockup(
             markSize: 26,
             textSize: 26,
-            taraFillColor: Colors.black,
+            taraFillColor: TaraTheme.dostBlue,
             senseColor: Colors.white,
           ),
           SizedBox(height: 18),
@@ -173,7 +410,7 @@ class _BrandStoryPanel extends StatelessWidget {
           const TaraBrandLockup(
             markSize: 30,
             textSize: 30,
-            taraFillColor: Colors.black,
+            taraFillColor: TaraTheme.dostBlue,
             senseColor: Colors.white,
           ),
           const Spacer(),

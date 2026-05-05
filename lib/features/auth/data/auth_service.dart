@@ -1,17 +1,16 @@
-import 'package:tarasense_mobile/features/auth/data/auth_api.dart';
+import 'package:tarasense_mobile/core/storage/token_storage.dart';
 import 'package:tarasense_mobile/features/auth/data/auth_repository.dart';
 import 'package:tarasense_mobile/features/auth/domain/auth_models.dart';
-import 'package:tarasense_mobile/core/storage/local_storage.dart';
 
 class AuthService {
   AuthService({
     required AuthRepository repository,
-    required LocalStorage localStorage,
+    required TokenStorage tokenStorage,
   })  : _repository = repository,
-        _localStorage = localStorage;
+        _tokenStorage = tokenStorage;
 
   final AuthRepository _repository;
-  final LocalStorage _localStorage;
+  final TokenStorage _tokenStorage;
 
   Future<AuthSession> login({
     required String email,
@@ -22,8 +21,7 @@ class AuthService {
       password: password,
     );
 
-    // Save tokens to local storage
-    await _localStorage.saveAuthTokens(session.tokens);
+    await _tokenStorage.saveTokens(session.tokens);
 
     return session;
   }
@@ -43,28 +41,28 @@ class AuthService {
       organization: organization,
     );
 
-    // Save tokens to local storage
-    await _localStorage.saveAuthTokens(session.tokens);
+    await _tokenStorage.saveTokens(session.tokens);
 
     return session;
   }
 
   Future<AuthSession> refresh() async {
-    final refreshToken = await _localStorage.getRefreshToken();
+    final tokens = await _tokenStorage.readTokens();
+    final refreshToken = tokens?.refreshToken;
     if (refreshToken == null || refreshToken.isEmpty) {
       throw const FormatException('No refresh token available');
     }
 
     final session = await _repository.refresh(refreshToken);
-    
-    // Save new tokens to local storage
-    await _localStorage.saveAuthTokens(session.tokens);
+
+    await _tokenStorage.saveTokens(session.tokens);
 
     return session;
   }
 
   Future<UserProfile> getProfile() async {
-    final accessToken = await _localStorage.getAccessToken();
+    final tokens = await _tokenStorage.readTokens();
+    final accessToken = tokens?.accessToken;
     if (accessToken == null || accessToken.isEmpty) {
       throw const FormatException('No access token available');
     }
@@ -73,8 +71,9 @@ class AuthService {
   }
 
   Future<void> logout() async {
-    final accessToken = await _localStorage.getAccessToken();
-    final refreshToken = await _localStorage.getRefreshToken();
+    final tokens = await _tokenStorage.readTokens();
+    final accessToken = tokens?.accessToken;
+    final refreshToken = tokens?.refreshToken;
 
     if (accessToken != null && accessToken.isNotEmpty) {
       try {
@@ -87,7 +86,6 @@ class AuthService {
       }
     }
 
-    // Clear local storage
-    await _localStorage.clearAuthTokens();
+    await _tokenStorage.clear();
   }
 }

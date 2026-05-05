@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tarasense_mobile/core/config/app_config.dart';
 import 'package:tarasense_mobile/core/network/api_error_formatter.dart';
 import 'package:tarasense_mobile/core/theme/tara_theme.dart';
+import 'package:tarasense_mobile/core/widgets/dost_logo_mark.dart';
 import 'package:tarasense_mobile/core/widgets/tara_brand_lockup.dart';
 import 'package:tarasense_mobile/features/auth/state/auth_providers.dart';
 import 'package:tarasense_mobile/features/msme/data/msme_api.dart';
@@ -18,7 +19,6 @@ class MsmeWorkspacePage extends ConsumerStatefulWidget {
 }
 
 class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
-  final TextEditingController _searchController = TextEditingController();
   final TextEditingController _profileNameController = TextEditingController();
   final TextEditingController _profileOrganizationController =
       TextEditingController();
@@ -88,7 +88,6 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
 
   @override
   void dispose() {
-    _searchController.dispose();
     _profileNameController.dispose();
     _profileOrganizationController.dispose();
     _profileAgeController.dispose();
@@ -621,11 +620,9 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
         child: Column(
           children: <Widget>[
             _WorkspaceHeader(
-              searchController: _searchController,
               currentTabIndex: _currentTabIndex,
               userName: session.user.name,
-              onSearchSubmitted: () =>
-                  _loadDashboard(query: _searchController.text.trim()),
+              onCreateStudy: () => setState(() => _currentTabIndex = 1),
               onLogout: authState.isBusy
                   ? null
                   : () => ref.read(authControllerProvider.notifier).logout(),
@@ -824,29 +821,13 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
           ],
         ),
       ),
-      bottomNavigationBar: NavigationBar(
-        height: 72,
-        selectedIndex: _currentTabIndex,
-        onDestinationSelected: (int index) {
-          setState(() => _currentTabIndex = index);
-        },
-        destinations: const <NavigationDestination>[
-          NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard_rounded),
-            label: 'Dashboard',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.add_circle_outline_rounded),
-            selectedIcon: Icon(Icons.add_circle_rounded),
-            label: 'Create Study',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline_rounded),
-            selectedIcon: Icon(Icons.person_rounded),
-            label: 'Profile',
-          ),
-        ],
+      bottomNavigationBar: _MsmePortalNavBar(
+        currentTabIndex: _currentTabIndex,
+        onStudies: () => setState(() => _currentTabIndex = 0),
+        onResults: () => setState(() => _currentTabIndex = 0),
+        onNew: () => setState(() => _currentTabIndex = 1),
+        onFic: () => setState(() => _currentTabIndex = 1),
+        onProfile: () => setState(() => _currentTabIndex = 2),
       ),
     );
   }
@@ -922,104 +903,227 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
 
 class _WorkspaceHeader extends StatelessWidget {
   const _WorkspaceHeader({
-    required this.searchController,
     required this.currentTabIndex,
     required this.userName,
-    required this.onSearchSubmitted,
+    required this.onCreateStudy,
     required this.onLogout,
   });
 
-  final TextEditingController searchController;
   final int currentTabIndex;
   final String userName;
-  final VoidCallback onSearchSubmitted;
+  final VoidCallback onCreateStudy;
   final VoidCallback? onLogout;
 
   @override
   Widget build(BuildContext context) {
     final List<String> titles = <String>[
-      'MSME Dashboard',
-      'Create Study',
-      'My Profile',
+      'My studies',
+      'New study',
+      'Profile',
     ];
+    final String initials = _initialsFor(userName);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 8),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
       child: Column(
         children: <Widget>[
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              const TaraBrandLockup(markSize: 18, textSize: 20),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Icon(
+                      Icons.more_horiz_rounded,
+                      color: TaraTheme.textPrimary.withValues(alpha: 0.68),
+                      size: 20,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      titles[currentTabIndex],
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontSize: 20,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      'MSME portal',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontSize: 11,
+                        height: 1.1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: TaraTheme.surface,
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: TaraTheme.border),
-                ),
-                child: Text(
-                  _formatHeaderDate(DateTime.now()),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: TaraTheme.textPrimary,
-                    fontWeight: FontWeight.w700,
+              IconButton(
+                onPressed: onCreateStudy,
+                icon: const Icon(Icons.add_rounded),
+                color: Colors.white,
+                style: IconButton.styleFrom(
+                  backgroundColor: TaraTheme.primary,
+                  fixedSize: const Size(36, 36),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               IconButton(
                 onPressed: onLogout,
-                icon: const Icon(Icons.logout_rounded),
-                style: IconButton.styleFrom(
-                  backgroundColor: TaraTheme.surface,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    side: const BorderSide(color: TaraTheme.border),
+                icon: Text(
+                  initials,
+                  style: const TextStyle(
+                    color: TaraTheme.primaryDark,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
                   ),
+                ),
+                style: IconButton.styleFrom(
+                  backgroundColor: TaraTheme.primaryTint,
+                  fixedSize: const Size(36, 36),
+                  shape: const CircleBorder(),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: TaraTheme.surface,
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: TaraTheme.border),
+        ],
+      ),
+    );
+  }
+}
+
+class _MsmePortalNavBar extends StatelessWidget {
+  const _MsmePortalNavBar({
+    required this.currentTabIndex,
+    required this.onStudies,
+    required this.onResults,
+    required this.onNew,
+    required this.onFic,
+    required this.onProfile,
+  });
+
+  final int currentTabIndex;
+  final VoidCallback onStudies;
+  final VoidCallback onResults;
+  final VoidCallback onNew;
+  final VoidCallback onFic;
+  final VoidCallback onProfile;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 60,
+      decoration: const BoxDecoration(
+        color: TaraTheme.surface,
+        border: Border(top: BorderSide(color: TaraTheme.border)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: _PortalNavItem(
+                icon: Icons.grid_view_rounded,
+                label: 'Studies',
+                selected: currentTabIndex == 0,
+                onTap: onStudies,
+              ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  titles[currentTabIndex],
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Welcome back, ${userName.trim().split(' ').first}',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: searchController,
-                  textInputAction: TextInputAction.search,
-                  onSubmitted: (_) => onSearchSubmitted(),
-                  decoration: InputDecoration(
-                    hintText: 'Search your studies and response status',
-                    prefixIcon: const Icon(Icons.search_rounded),
-                    suffixIcon: IconButton(
-                      onPressed: onSearchSubmitted,
-                      icon: const Icon(Icons.arrow_forward_rounded),
+            Expanded(
+              child: _PortalNavItem(
+                icon: Icons.done_rounded,
+                label: 'Results',
+                selected: false,
+                onTap: onResults,
+              ),
+            ),
+            Expanded(
+              child: Center(
+                child: Transform.translate(
+                  offset: const Offset(0, -14),
+                  child: Material(
+                    color: TaraTheme.primary,
+                    shape: const CircleBorder(),
+                    elevation: 3,
+                    child: InkWell(
+                      onTap: onNew,
+                      customBorder: const CircleBorder(),
+                      child: const SizedBox(
+                        height: 42,
+                        width: 42,
+                        child: Icon(
+                          Icons.add_rounded,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
-        ],
+            Expanded(
+              child: _PortalNavItem(
+                icon: Icons.format_align_center_rounded,
+                label: 'FIC',
+                selected: currentTabIndex == 1,
+                onTap: onFic,
+              ),
+            ),
+            Expanded(
+              child: _PortalNavItem(
+                icon: Icons.person_outline_rounded,
+                label: 'Profile',
+                selected: currentTabIndex == 2,
+                onTap: onProfile,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PortalNavItem extends StatelessWidget {
+  const _PortalNavItem({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color color = selected ? TaraTheme.primary : TaraTheme.textSecondary;
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(icon, color: color, size: 18),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: color,
+                fontSize: 8,
+                height: 1,
+                fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1047,95 +1151,63 @@ class _DashboardTab extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: onRefresh,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(18, 6, 18, 24),
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 18),
         children: <Widget>[
-          _HeroWorkspaceCard(
-            title: dashboard?.title ?? 'MSME Dashboard',
-            subtitle:
-                dashboard?.subtitle ??
-                'Create and manage studies, coordinate with FIC, and monitor response progress in one view.',
-            actionLabel: 'Create Study',
-            onAction: onOpenCreateStudy,
-          ),
-          const SizedBox(height: 16),
           if (isLoading)
             const _LoadingCard()
           else if (error != null)
             _ErrorCard(message: error!, onRetry: onRetry)
           else if (dashboard != null) ...<Widget>[
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
+            const _StudyFilterRail(),
+            const SizedBox(height: 10),
+            if (dashboard!.studies.isEmpty)
+              const _EmptyCard(
+                title: 'No studies yet',
+                message:
+                    'Create your first MSME study to start collecting responses.',
+              )
+            else
+              ...dashboard!.studies.map(
+                (MsmeStudyItem study) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: _StudyCard(study: study),
+                ),
+              ),
+            const SizedBox(height: 4),
+            Text(
+              'QUICK ACTIONS',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: TaraTheme.textPrimary,
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.8,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
               children: <Widget>[
-                _StatCard(
-                  label: 'Book to FIC',
-                  value: dashboard!.stats.ficBookings.toString(),
-                  subtitle: 'Studies using FIC facilities',
-                  tint: const Color(0xFFFFF3D4),
-                  icon: Icons.assignment_turned_in_outlined,
+                Expanded(
+                  child: _QuickActionButton(
+                    title: 'New study',
+                    subtitle: 'Launch study builder',
+                    icon: Icons.north_east_rounded,
+                    backgroundColor: TaraTheme.primary,
+                    foregroundColor: Colors.white,
+                    onTap: onOpenCreateStudy,
+                  ),
                 ),
-                _StatCard(
-                  label: 'Recent / History',
-                  value: dashboard!.stats.totalStudies.toString(),
-                  subtitle: 'Total studies created',
-                  tint: const Color(0xFFEAF2FF),
-                  icon: Icons.grid_view_rounded,
-                ),
-                _StatCard(
-                  label: 'Survey Responses',
-                  value: dashboard!.stats.totalResponses.toString(),
-                  subtitle: 'Responses collected',
-                  tint: const Color(0xFFE6FBF4),
-                  icon: Icons.assignment_rounded,
-                ),
-                _StatCard(
-                  label: 'Active Studies',
-                  value: dashboard!.stats.activeStudies.toString(),
-                  subtitle: 'Recruiting or ongoing studies',
-                  tint: const Color(0xFFF1F5F9),
-                  icon: Icons.add_circle_outline_rounded,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _QuickActionButton(
+                    title: 'Book FIC',
+                    subtitle: 'View availability',
+                    icon: Icons.north_east_rounded,
+                    backgroundColor: const Color(0xFF111111),
+                    foregroundColor: Colors.white,
+                    onTap: onOpenCreateStudy,
+                  ),
                 ),
               ],
-            ),
-            const SizedBox(height: 18),
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: TaraTheme.surface,
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: TaraTheme.border),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Row(
-                    children: <Widget>[
-                      Text(
-                        'MSME Study List',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(width: 10),
-                      _CounterBadge(
-                        value: dashboard!.studies.length.toString(),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  if (dashboard!.studies.isEmpty)
-                    const _EmptyCard(
-                      title: 'No studies yet',
-                      message:
-                          'Create your first MSME study to start collecting responses.',
-                    )
-                  else
-                    ...dashboard!.studies.map(
-                      (MsmeStudyItem study) => Padding(
-                        padding: const EdgeInsets.only(bottom: 14),
-                        child: _StudyCard(study: study),
-                      ),
-                    ),
-                ],
-              ),
             ),
           ],
         ],
@@ -1546,28 +1618,13 @@ class _CreateStudyTab extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FBFF),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: TaraTheme.border),
-                      ),
-                      child: Row(
-                        children: <Widget>[
-                          const Icon(
-                            Icons.calendar_month_outlined,
-                            color: TaraTheme.primaryDark,
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              'Facility booking and session scheduling are ready on mobile. Each session becomes part of the created study.',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ),
-                        ],
-                      ),
+                    _MobileFacilityCalendar(
+                      startDate: testingStartDate,
+                      durationDays:
+                          int.tryParse(durationController.text.trim()) ?? 1,
+                      selectedFacility: selectedFacility,
+                      sessions: sessions,
+                      onDateSelected: onTestingDateChanged,
                     ),
                     const SizedBox(height: 12),
                     ...sessions.asMap().entries.map(
@@ -1579,6 +1636,8 @@ class _CreateStudyTab extends StatelessWidget {
                           onChanged: (_SessionDraft value) {
                             onSessionChanged(entry.key, value);
                           },
+                          durationDays:
+                              int.tryParse(durationController.text.trim()) ?? 1,
                           onRemove: sessions.length <= 1
                               ? null
                               : () => onRemoveSession(entry.key),
@@ -1942,47 +2001,78 @@ class _HeroWorkspaceCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: <Color>[Color(0xFFF97316), Color(0xFFFF9F57)],
-        ),
-        borderRadius: BorderRadius.circular(30),
+        color: TaraTheme.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: TaraTheme.border),
         boxShadow: const <BoxShadow>[
           BoxShadow(
-            color: Color(0x22F97316),
-            blurRadius: 24,
-            offset: Offset(0, 16),
+            color: Color(0x120057A8),
+            blurRadius: 28,
+            offset: Offset(0, 14),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Text(
-            'MSME WORKSPACE',
-            style: TextStyle(
-              color: Colors.white70,
-              letterSpacing: 2.2,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const DostLogoMark(size: 48),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    const TaraBrandLockup(markSize: 20, textSize: 22),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Sensory and consumer driven food innovation platform',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: TaraTheme.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Text(
+            'Test. Analyze. Refine. Advance.',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: TaraTheme.textPrimary,
+              height: 1.08,
+              letterSpacing: 0,
             ),
           ),
           const SizedBox(height: 10),
           Text(
             title,
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(color: Colors.white),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: TaraTheme.dostBlue,
+              letterSpacing: 0,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             subtitle,
             style: const TextStyle(
-              color: Colors.white,
+              color: TaraTheme.textSecondary,
               height: 1.5,
               fontSize: 14,
             ),
+          ),
+          const SizedBox(height: 18),
+          const Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              _HeroSignalPill(label: 'Food Innovation Centers'),
+              _HeroSignalPill(label: 'MSME studies'),
+              _HeroSignalPill(label: 'Consumer feedback'),
+            ],
           ),
           const SizedBox(height: 18),
           SizedBox(
@@ -1990,13 +2080,38 @@ class _HeroWorkspaceCard extends StatelessWidget {
             child: FilledButton(
               onPressed: onAction,
               style: FilledButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: TaraTheme.primaryDark,
+                backgroundColor: TaraTheme.primary,
+                foregroundColor: Colors.white,
               ),
               child: Text(actionLabel),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _HeroSignalPill extends StatelessWidget {
+  const _HeroSignalPill({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: TaraTheme.primaryTint,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: TaraTheme.primarySoft),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: TaraTheme.dostBlueDark,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }
@@ -2036,85 +2151,39 @@ class _SectionCard extends StatelessWidget {
   }
 }
 
-class _StatCard extends StatelessWidget {
-  const _StatCard({
-    required this.label,
-    required this.value,
-    required this.subtitle,
-    required this.tint,
-    required this.icon,
-  });
-
-  final String label;
-  final String value;
-  final String subtitle;
-  final Color tint;
-  final IconData icon;
+class _StudyFilterRail extends StatelessWidget {
+  const _StudyFilterRail();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 164,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: TaraTheme.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: TaraTheme.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Container(
-            height: 44,
-            width: 44,
-            decoration: BoxDecoration(
-              color: tint,
-              borderRadius: BorderRadius.circular(14),
+    const List<String> filters = <String>['All', 'Active', 'Draft', 'Completed'];
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: filters.map((String label) {
+          final bool selected = label == 'All';
+          return Padding(
+            padding: const EdgeInsets.only(right: 6),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+              decoration: BoxDecoration(
+                color: selected ? TaraTheme.primaryTint : TaraTheme.surface,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                  color: selected ? TaraTheme.primary : TaraTheme.border,
+                ),
+              ),
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: selected ? TaraTheme.primaryDark : TaraTheme.textPrimary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
-            child: Icon(icon, color: TaraTheme.primaryDark),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            value,
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontSize: 28),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label.toUpperCase(),
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: TaraTheme.textSecondary,
-              letterSpacing: 0.7,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
-        ],
-      ),
-    );
-  }
-}
-
-class _CounterBadge extends StatelessWidget {
-  const _CounterBadge({required this.value});
-
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: TaraTheme.primaryTint,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        value,
-        style: const TextStyle(
-          color: TaraTheme.primaryDark,
-          fontWeight: FontWeight.w800,
-        ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -2127,11 +2196,28 @@ class _StudyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String normalizedStatus = study.status.toUpperCase();
+    final bool draft = normalizedStatus.contains('DRAFT');
+    final bool active =
+        normalizedStatus.contains('ACTIVE') || normalizedStatus.contains('RECRUIT');
+    final bool ficPending =
+        normalizedStatus.contains('PENDING') ||
+        study.statusLabel.toUpperCase().contains('FIC');
+    final List<String> tags = <String>[
+      if (study.category.trim().isNotEmpty) _humanizeLabel(study.category),
+      if (study.stage.trim().isNotEmpty) _humanizeLabel(study.stage),
+      if (study.location.trim().isNotEmpty) study.location,
+    ].take(3).toList();
+    final String responseLabel = draft ? 'Target panelists' : 'Responses';
+    final String responseValue = draft
+        ? study.sampleSize.toString()
+        : '${study.responseCount} / ${study.sampleSize}';
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(12, 11, 12, 10),
       decoration: BoxDecoration(
-        color: TaraTheme.background,
-        borderRadius: BorderRadius.circular(24),
+        color: TaraTheme.surface,
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: TaraTheme.border),
       ),
       child: Column(
@@ -2146,57 +2232,220 @@ class _StudyCard extends StatelessWidget {
                   children: <Widget>[
                     Text(
                       study.title,
-                      style: Theme.of(context).textTheme.titleMedium,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontSize: 13,
+                        height: 1.12,
+                        letterSpacing: 0,
+                      ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 2),
                     Text(
-                      study.productName,
-                      style: Theme.of(context).textTheme.bodyMedium,
+                      _studySubtitle(study),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: TaraTheme.textPrimary,
+                        fontSize: 10,
+                        height: 1.1,
+                      ),
                     ),
                   ],
                 ),
               ),
-              _StatusPill(
-                label: _humanizeLabel(study.status),
-                color: _statusColor(study.status),
+              _CompactStatusPill(
+                label: ficPending
+                    ? 'Pending FIC'
+                    : active
+                    ? 'Active'
+                    : draft
+                    ? 'Draft'
+                    : _humanizeLabel(study.status),
+                color: ficPending
+                    ? TaraTheme.primaryDark
+                    : active
+                    ? TaraTheme.mintText
+                    : TaraTheme.textSecondary,
+                backgroundColor: ficPending
+                    ? TaraTheme.primaryTint
+                    : active
+                    ? const Color(0xFFEAF8D9)
+                    : const Color(0xFFF3F4F6),
               ),
             ],
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: <Widget>[
-              _InfoChip(label: _humanizeLabel(study.category)),
-              _InfoChip(label: _humanizeLabel(study.stage)),
-              _InfoChip(label: study.location),
-            ],
-          ),
-          const SizedBox(height: 14),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: study.progress,
-              minHeight: 10,
-              backgroundColor: TaraTheme.primarySoft,
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                TaraTheme.primary,
-              ),
-            ),
           ),
           const SizedBox(height: 8),
-          Text(
-            '${study.responseCount}/${study.sampleSize} responses',
-            style: Theme.of(context).textTheme.bodyMedium,
+          Wrap(
+            spacing: 5,
+            runSpacing: 5,
+            children: tags
+                .map((String label) => _MiniTag(label: label))
+                .toList(),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 9),
           Text(
-            study.statusLabel,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+            responseLabel,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              fontSize: 9,
+              height: 1,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Row(
+            children: <Widget>[
+              if (!draft)
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: LinearProgressIndicator(
+                      value: study.progress,
+                      minHeight: 3,
+                      backgroundColor: const Color(0xFFE5E7EB),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        TaraTheme.primary,
+                      ),
+                    ),
+                  ),
+                )
+              else
+                const Spacer(),
+              const SizedBox(width: 10),
+              Text(
+                responseValue,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: TaraTheme.textPrimary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CompactStatusPill extends StatelessWidget {
+  const _CompactStatusPill({
+    required this.label,
+    required this.color,
+    required this.backgroundColor,
+  });
+
+  final String label;
+  final Color color;
+  final Color backgroundColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.w900,
+          height: 1,
+        ),
+      ),
+    );
+  }
+}
+
+class _MiniTag extends StatelessWidget {
+  const _MiniTag({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0F0F0),
+        borderRadius: BorderRadius.circular(5),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: TaraTheme.textPrimary,
+          fontSize: 9,
+          fontWeight: FontWeight.w800,
+          height: 1,
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickActionButton extends StatelessWidget {
+  const _QuickActionButton({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.backgroundColor,
+    required this.foregroundColor,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color backgroundColor;
+  final Color foregroundColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: backgroundColor,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 11, 10, 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: foregroundColor,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  Icon(icon, color: foregroundColor, size: 14),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: foregroundColor.withValues(alpha: 0.72),
+                  fontSize: 9,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -2300,17 +2549,305 @@ class _AttributeEditor extends StatelessWidget {
   }
 }
 
+class _MobileFacilityCalendar extends StatelessWidget {
+  const _MobileFacilityCalendar({
+    required this.startDate,
+    required this.durationDays,
+    required this.selectedFacility,
+    required this.sessions,
+    required this.onDateSelected,
+  });
+
+  final DateTime startDate;
+  final int durationDays;
+  final String? selectedFacility;
+  final List<_SessionDraft> sessions;
+  final ValueChanged<DateTime> onDateSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final int safeDuration = durationDays < 1 ? 1 : durationDays;
+    final DateTime today = DateTime.now();
+    final DateTime firstDate = DateTime(today.year, today.month, today.day);
+    final DateTime selectedDate = DateTime(
+      startDate.year,
+      startDate.month,
+      startDate.day,
+    );
+    final DateTime rangeStart = selectedDate.isBefore(firstDate)
+        ? selectedDate
+        : firstDate;
+    final List<DateTime> visibleDates = List<DateTime>.generate(
+      14,
+      (int index) => rangeStart.add(Duration(days: index)),
+    );
+    final int totalCapacity = sessions.fold<int>(
+      0,
+      (int total, _SessionDraft session) => total + session.capacity,
+    );
+    final String facilityName = selectedFacility?.trim().isEmpty ?? true
+        ? 'No facility selected'
+        : selectedFacility!;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FBFF),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: TaraTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Container(
+                height: 42,
+                width: 42,
+                decoration: BoxDecoration(
+                  color: TaraTheme.primaryTint,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.calendar_month_outlined,
+                  color: TaraTheme.primaryDark,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      'Facility Calendar',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      facilityName,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: visibleDates.map((DateTime date) {
+                final int dayOffset = date.difference(selectedDate).inDays;
+                final bool selected = dayOffset >= 0 && dayOffset < safeDuration;
+                final bool past = date.isBefore(firstDate);
+                final bool hasSessions = sessions.any(
+                  (_SessionDraft session) => session.dayOffset == dayOffset,
+                );
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: _CalendarDateChip(
+                    date: date,
+                    selected: selected,
+                    disabled: past,
+                    hasSessions: hasSessions,
+                    onTap: past ? null : () => onDateSelected(date),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: _CalendarMetric(
+                  label: 'Selected',
+                  value: '$safeDuration day${safeDuration == 1 ? '' : 's'}',
+                  icon: Icons.event_available_outlined,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _CalendarMetric(
+                  label: 'Capacity',
+                  value: '$totalCapacity seats',
+                  icon: Icons.groups_2_outlined,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              _CalendarLegendDot(
+                label: 'Testing date',
+                color: TaraTheme.primary,
+              ),
+              const _CalendarLegendDot(
+                label: 'Has session',
+                color: TaraTheme.dostBlue,
+              ),
+              _CalendarLegendDot(
+                label: 'Unavailable',
+                color: TaraTheme.textSecondary.withValues(alpha: 0.38),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CalendarDateChip extends StatelessWidget {
+  const _CalendarDateChip({
+    required this.date,
+    required this.selected,
+    required this.disabled,
+    required this.hasSessions,
+    required this.onTap,
+  });
+
+  final DateTime date;
+  final bool selected;
+  final bool disabled;
+  final bool hasSessions;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color borderColor = selected ? TaraTheme.primary : TaraTheme.border;
+    final Color textColor = disabled
+        ? TaraTheme.textSecondary.withValues(alpha: 0.55)
+        : selected
+        ? TaraTheme.primaryDark
+        : TaraTheme.textPrimary;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        width: 74,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+        decoration: BoxDecoration(
+          color: disabled
+              ? TaraTheme.background
+              : selected
+              ? TaraTheme.primaryTint
+              : TaraTheme.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: borderColor, width: selected ? 1.5 : 1),
+        ),
+        child: Column(
+          children: <Widget>[
+            Text(
+              _formatWeekday(date),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: textColor,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              date.day.toString(),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: textColor,
+                fontSize: 22,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Container(
+              height: 6,
+              width: 6,
+              decoration: BoxDecoration(
+                color: hasSessions ? TaraTheme.dostBlue : Colors.transparent,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CalendarMetric extends StatelessWidget {
+  const _CalendarMetric({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: TaraTheme.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: TaraTheme.border),
+      ),
+      child: Row(
+        children: <Widget>[
+          Icon(icon, color: TaraTheme.primaryDark, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(value, style: Theme.of(context).textTheme.titleMedium),
+                Text(label, style: Theme.of(context).textTheme.bodySmall),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CalendarLegendDot extends StatelessWidget {
+  const _CalendarLegendDot({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Container(
+          height: 8,
+          width: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Text(label, style: Theme.of(context).textTheme.bodySmall),
+      ],
+    );
+  }
+}
+
 class _SessionEditor extends StatelessWidget {
   const _SessionEditor({
     required this.session,
     required this.index,
     required this.onChanged,
+    required this.durationDays,
     this.onRemove,
   });
 
   final _SessionDraft session;
   final int index;
   final ValueChanged<_SessionDraft> onChanged;
+  final int durationDays;
   final VoidCallback? onRemove;
 
   @override
@@ -2346,6 +2883,27 @@ class _SessionEditor extends StatelessWidget {
             decoration: const InputDecoration(labelText: 'Session Label'),
           ),
           const SizedBox(height: 12),
+          if (durationDays > 1) ...<Widget>[
+            DropdownButtonFormField<int>(
+              initialValue: session.dayOffset
+                  .clamp(0, durationDays - 1)
+                  .toInt(),
+              items: List<DropdownMenuItem<int>>.generate(
+                durationDays,
+                (int index) => DropdownMenuItem<int>(
+                  value: index,
+                  child: Text('Day ${index + 1}'),
+                ),
+              ),
+              onChanged: (int? value) {
+                if (value != null) {
+                  onChanged(session.copyWith(dayOffset: value));
+                }
+              },
+              decoration: const InputDecoration(labelText: 'Testing Day'),
+            ),
+            const SizedBox(height: 12),
+          ],
           Row(
             children: <Widget>[
               Expanded(
@@ -2512,54 +3070,6 @@ class _MetadataRow extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.label, required this.color});
-
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(color: color, fontWeight: FontWeight.w800),
-      ),
-    );
-  }
-}
-
-class _InfoChip extends StatelessWidget {
-  const _InfoChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: TaraTheme.primaryTint,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: TaraTheme.primaryDark,
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-        ),
       ),
     );
   }
@@ -2947,22 +3457,24 @@ class _SessionDraft {
     String? startTime,
     String? endTime,
     int? capacity,
+    int? dayOffset,
   }) {
     return _SessionDraft(
       label: label ?? this.label,
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
       capacity: capacity ?? this.capacity,
-      dayOffset: dayOffset,
+      dayOffset: dayOffset ?? this.dayOffset,
     );
   }
 
   Map<String, dynamic> toJson(DateTime date) {
+    final DateTime sessionDate = date.add(Duration(days: dayOffset));
     return <String, dynamic>{
       'dayOffset': dayOffset,
       'label': label.trim().isEmpty ? 'Session' : label.trim(),
-      'startDateTime': _combineDateAndTime(date, startTime),
-      'endDateTime': _combineDateAndTime(date, endTime),
+      'startDateTime': _combineDateAndTime(sessionDate, startTime),
+      'endDateTime': _combineDateAndTime(sessionDate, endTime),
       'capacity': capacity,
     };
   }
@@ -3010,20 +3522,6 @@ class _SampleSetupDraft {
   }
 }
 
-Color _statusColor(String value) {
-  final String normalized = value.toUpperCase();
-  if (normalized == 'ACTIVE' || normalized == 'RECRUITING') {
-    return TaraTheme.mintText;
-  }
-  if (normalized == 'DRAFT') {
-    return TaraTheme.lavenderText;
-  }
-  if (normalized == 'COMPLETED' || normalized == 'ARCHIVED') {
-    return TaraTheme.roseText;
-  }
-  return TaraTheme.textSecondary;
-}
-
 String _humanizeLabel(String value) {
   return value
       .toLowerCase()
@@ -3037,22 +3535,30 @@ String _humanizeLabel(String value) {
       .join(' ');
 }
 
-String _formatHeaderDate(DateTime value) {
-  const List<String> months = <String>[
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
-  return '${months[value.month - 1]} ${value.day}, ${value.year}';
+String _studySubtitle(MsmeStudyItem study) {
+  if (study.location.trim().isNotEmpty) {
+    return 'FIC: ${study.location.trim()}';
+  }
+  if (study.productName.trim().isNotEmpty) {
+    return study.productName.trim();
+  }
+  return 'Self-administered';
+}
+
+String _initialsFor(String value) {
+  final List<String> parts = value
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((String part) => part.isNotEmpty)
+      .toList();
+  if (parts.isEmpty) {
+    return 'MS';
+  }
+  if (parts.length == 1) {
+    return parts.first.substring(0, 1).toUpperCase();
+  }
+  return '${parts.first.substring(0, 1)}${parts.last.substring(0, 1)}'
+      .toUpperCase();
 }
 
 String _formatLongDate(DateTime value) {
@@ -3061,6 +3567,19 @@ String _formatLongDate(DateTime value) {
 
 String _formatShortDate(DateTime value) {
   return '${value.month}/${value.day}/${value.year}';
+}
+
+String _formatWeekday(DateTime value) {
+  const List<String> weekdays = <String>[
+    'Mon',
+    'Tue',
+    'Wed',
+    'Thu',
+    'Fri',
+    'Sat',
+    'Sun',
+  ];
+  return weekdays[value.weekday - 1];
 }
 
 String _formatLongDateTime(DateTime value) {

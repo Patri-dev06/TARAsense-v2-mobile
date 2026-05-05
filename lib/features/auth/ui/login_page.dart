@@ -77,6 +77,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       child: AuthScaffold(
         title: 'Log in to your account',
         subtitle: 'Enter your email and password below to log in.',
+        isLoading: authState.isBusy,
+        loadingMessage: 'Logging in...',
         child: Form(
           key: _formKey,
           autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -239,41 +241,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ),
                 if (authState.errorMessage != null) ...<Widget>[
                   const SizedBox(height: 14),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF1F2),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFFFECDD3)),
-                    ),
-                    child: Text(
-                      authState.errorMessage!,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.red.shade700,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
+                  AuthErrorMessage(message: authState.errorMessage!),
                 ],
                 const SizedBox(height: 18),
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
                     onPressed: authState.isBusy ? null : _submit,
-                    child: authState.isBusy
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text('Log in'),
+                    child: const Text('Log in'),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -299,6 +274,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         child: const Text('Sign up'),
                       ),
                     ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: authState.isBusy ? null : () => context.go('/'),
+                    icon: const Icon(Icons.dashboard_outlined),
+                    label: const Text('Back to main dashboard'),
                   ),
                 ),
               ],

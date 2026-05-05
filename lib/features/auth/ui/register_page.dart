@@ -22,6 +22,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
   bool _obscurePassword = true;
   String _selectedRole = 'MSME';
+  bool _registrationSucceeded = false;
+  bool _redirectScheduled = false;
 
   @override
   void dispose() {
@@ -38,6 +40,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     }
 
     FocusScope.of(context).unfocus();
+    setState(() => _registrationSucceeded = false);
 
     await ref
         .read(authControllerProvider.notifier)
@@ -52,6 +55,23 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         );
   }
 
+  void _handleRegistrationSuccess(AuthState next) {
+    if (_redirectScheduled) {
+      return;
+    }
+
+    _redirectScheduled = true;
+    ScaffoldMessenger.of(context).clearSnackBars();
+    setState(() => _registrationSucceeded = true);
+
+    Future<void>.delayed(const Duration(milliseconds: 1100), () {
+      if (!mounted) {
+        return;
+      }
+      context.go(next.session?.user.homePath ?? '/dashboard');
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
@@ -60,12 +80,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     ref.listen<AuthState>(authControllerProvider, (previous, next) {
       if (previous?.status != AuthStatus.authenticated &&
           next.status == AuthStatus.authenticated) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Account created successfully.')),
-        );
-        context.go(next.session?.user.homePath ?? '/dashboard');
+        _handleRegistrationSuccess(next);
       } else if (next.errorMessage != null &&
           previous?.errorMessage != next.errorMessage) {
+        _redirectScheduled = false;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(next.errorMessage!),
@@ -81,6 +99,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         title: 'Create an account',
         subtitle:
             'Use your name, organization, email, and password to get started.',
+        isLoading: authState.isBusy,
+        loadingMessage: 'Creating account...',
+        isSuccess: _registrationSucceeded,
+        successMessage: 'Account created successfully.',
         child: Form(
           key: _formKey,
           autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -275,41 +297,14 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                 ),
                 if (authState.errorMessage != null) ...<Widget>[
                   const SizedBox(height: 14),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF1F2),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFFFECDD3)),
-                    ),
-                    child: Text(
-                      authState.errorMessage!,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.red.shade700,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
+                  AuthErrorMessage(message: authState.errorMessage!),
                 ],
                 const SizedBox(height: 18),
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
                     onPressed: authState.isBusy ? null : _submit,
-                    child: authState.isBusy
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text('Create account'),
+                    child: const Text('Create account'),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -335,6 +330,15 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                         child: const Text('Log in'),
                       ),
                     ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: authState.isBusy ? null : () => context.go('/'),
+                    icon: const Icon(Icons.dashboard_outlined),
+                    label: const Text('Back to main dashboard'),
                   ),
                 ),
               ],

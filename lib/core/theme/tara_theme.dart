@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
 class TaraTheme {
+  static const Color dostBlue = Color(0xFF0057A8);
+  static const Color dostBlueDark = Color(0xFF003B73);
+  static const Color dostYellow = Color(0xFFFFD100);
+  static const Color dostRed = Color(0xFFE31B23);
   static const Color primary = Color(0xFFF97316);
   static const Color primaryDark = Color(0xFFEA580C);
   static const Color primarySoft = Color(0xFFFFE2CC);
@@ -137,9 +141,10 @@ class TaraTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: textPrimary,
+          backgroundColor: primary,
+          foregroundColor: Colors.white,
           minimumSize: const Size(64, 56),
-          side: const BorderSide(color: border),
+          side: const BorderSide(color: primary),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(999),

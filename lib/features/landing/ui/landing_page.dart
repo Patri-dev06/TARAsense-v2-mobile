@@ -102,7 +102,7 @@ class LandingPage extends StatelessWidget {
                     const TaraBrandLockup(
                       markSize: 24,
                       textSize: 28,
-                      taraFillColor: Colors.black,
+                      taraFillColor: TaraTheme.dostBlue,
                       senseColor: Colors.white,
                     ),
                     const SizedBox(height: 18),
@@ -155,8 +155,8 @@ class LandingPage extends StatelessWidget {
                       child: FilledButton(
                         onPressed: () => context.go('/register'),
                         style: FilledButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: TaraTheme.primaryDark,
+                          backgroundColor: TaraTheme.primary,
+                          foregroundColor: Colors.white,
                         ),
                         child: const Text('Create account'),
                       ),
@@ -167,8 +167,9 @@ class LandingPage extends StatelessWidget {
                       child: OutlinedButton(
                         onPressed: () => context.go('/login'),
                         style: OutlinedButton.styleFrom(
+                          backgroundColor: TaraTheme.primaryDark,
                           foregroundColor: Colors.white,
-                          side: const BorderSide(color: Color(0x55FFFFFF)),
+                          side: const BorderSide(color: TaraTheme.primaryDark),
                         ),
                         child: const Text('Log in'),
                       ),

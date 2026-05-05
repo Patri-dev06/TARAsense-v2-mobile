@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tarasense_mobile/core/config/app_config.dart';
 import 'package:tarasense_mobile/features/api_test/ui/api_test_page.dart';
+import 'package:tarasense_mobile/features/admin/ui/admin_workspace_page.dart';
 import 'package:tarasense_mobile/features/auth/state/auth_providers.dart';
 import 'package:tarasense_mobile/features/auth/state/auth_state.dart';
 import 'package:tarasense_mobile/features/auth/ui/login_page.dart';
@@ -35,8 +36,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const FicWorkspacePage(),
       ),
       GoRoute(
+        path: '/consumer',
+        builder: (context, state) => const TesterWorkspacePage(),
+      ),
+      GoRoute(
         path: '/tester',
         builder: (context, state) => const TesterWorkspacePage(),
+      ),
+      GoRoute(
+        path: '/admin',
+        builder: (context, state) => const AdminWorkspacePage(),
       ),
       GoRoute(
         path: '/api-test',
@@ -79,5 +88,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 });
 
 bool _isRoleWorkspace(String path) {
-  return path == '/dashboard' || path == '/fic' || path == '/tester';
+  return path == '/dashboard' ||
+      path == '/fic' ||
+      path == '/consumer' ||
+      path == '/tester' ||
+      path == '/admin';
 }

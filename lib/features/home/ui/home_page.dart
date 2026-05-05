@@ -549,7 +549,7 @@ class _HeroSection extends StatelessWidget {
           const TaraBrandLockup(
             markSize: 22,
             textSize: 24,
-            taraFillColor: Colors.black,
+            taraFillColor: TaraTheme.dostBlue,
             senseColor: Colors.white,
           ),
           const SizedBox(height: 18),
@@ -595,8 +595,8 @@ class _HeroSection extends StatelessWidget {
                 onPrimaryAction();
               },
               style: FilledButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: TaraTheme.primaryDark,
+                backgroundColor: TaraTheme.primary,
+                foregroundColor: Colors.white,
               ),
               child: Text(primaryActionLabel),
             ),
@@ -609,8 +609,9 @@ class _HeroSection extends StatelessWidget {
                 onSecondaryAction();
               },
               style: OutlinedButton.styleFrom(
+                backgroundColor: TaraTheme.primaryDark,
                 foregroundColor: Colors.white,
-                side: const BorderSide(color: Color(0x55FFFFFF)),
+                side: const BorderSide(color: TaraTheme.primaryDark),
               ),
               child: Text(secondaryActionLabel),
             ),

@@ -27,14 +27,20 @@ class UserProfile {
       normalizedRole == 'TESTER' ||
       normalizedRole == 'PANELIST' ||
       normalizedRole.contains('CONSUMER') ||
-      normalizedRole.contains('TESTER');
+      normalizedRole.contains('TESTER') ||
+      normalizedRole.contains('PANELIST');
+
+  bool get isAdmin => normalizedRole.contains('ADMIN');
 
   String get homePath {
+    if (isAdmin) {
+      return '/admin';
+    }
     if (isFic) {
       return '/fic';
     }
     if (isTester) {
-      return '/tester';
+      return '/consumer';
     }
     return '/dashboard';
   }
@@ -44,9 +50,22 @@ class UserProfile {
       id: (json['id'] ?? '').toString(),
       email: (json['email'] ?? '').toString(),
       name: (json['name'] ?? '').toString(),
-      role: (json['role'] ?? '').toString(),
+      role: _roleFromJson(json),
       organization: json['organization']?.toString(),
     );
+  }
+
+  static String _roleFromJson(Map<String, dynamic> json) {
+    final rawRole = json['role'] ?? json['userRole'] ?? json['accountType'];
+    if (rawRole is Map) {
+      return (rawRole['name'] ??
+              rawRole['role'] ??
+              rawRole['code'] ??
+              rawRole['value'] ??
+              '')
+          .toString();
+    }
+    return (rawRole ?? '').toString();
   }
 }
 
@@ -93,6 +112,7 @@ class AuthSession {
     }
 
     final userMap = Map<String, dynamic>.from(rawUser);
+    userMap['role'] ??= json['role'] ?? json['userRole'] ?? json['accountType'];
     final user = UserProfile.fromJson(userMap);
     final tokens = AuthTokens.fromJson(json);
 

@@ -67,7 +67,9 @@ class AuthController extends Notifier<AuthState> {
       await _tokenStorage.saveTokens(session.tokens);
       state = AuthState.authenticated(session);
     } catch (error) {
-      state = AuthState.unauthenticated(errorMessage: _errorMessage(error));
+      state = AuthState.unauthenticated(
+        errorMessage: _loginErrorMessage(error),
+      );
     }
   }
 
@@ -180,10 +182,23 @@ class AuthController extends Notifier<AuthState> {
     return error.response?.statusCode == 401;
   }
 
+  String _loginErrorMessage(Object error) {
+    if (error is DioException) {
+      final int? statusCode = error.response?.statusCode;
+      if (statusCode == 400 || statusCode == 401 || statusCode == 422) {
+        return 'Incorrect email or password. Please check your credentials and try again.';
+      }
+    }
+    return _errorMessage(error);
+  }
+
   String _errorMessage(Object error) {
     if (error is DioException) {
       if (error.response?.statusCode == 401) {
-        return 'Invalid credentials.';
+        return 'Incorrect email or password. Please check your credentials and try again.';
+      }
+      if (error.response?.statusCode == 403) {
+        return 'Your account cannot sign in yet. Please contact TARAsense support.';
       }
       if (error.response?.statusCode == 404) {
         return formatApiError(error, includeUri: true);
