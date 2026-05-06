@@ -22,15 +22,6 @@ class FicWorkspacePage extends ConsumerWidget {
               Row(
                 children: <Widget>[
                   const Expanded(child: TaraBrandLockup()),
-                  IconButton(
-                    tooltip: 'Log out',
-                    onPressed: authState.isBusy
-                        ? null
-                        : () => ref
-                              .read(authControllerProvider.notifier)
-                              .logout(),
-                    icon: const Icon(Icons.logout_rounded),
-                  ),
                 ],
               ),
               const SizedBox(height: 28),
@@ -71,6 +62,21 @@ class FicWorkspacePage extends ConsumerWidget {
                   ],
                 ),
               ),
+              const SizedBox(height: 12),
+              _WorkspaceTile(
+                icon: Icons.settings_outlined,
+                title: 'Settings',
+                subtitle: 'Manage account actions for this FIC workspace.',
+                trailing: OutlinedButton.icon(
+                  onPressed: authState.isBusy
+                      ? null
+                      : () => ref
+                            .read(authControllerProvider.notifier)
+                            .logout(),
+                  icon: const Icon(Icons.logout_rounded),
+                  label: const Text('Log out'),
+                ),
+              ),
             ],
           ),
         ),
@@ -84,11 +90,13 @@ class _WorkspaceTile extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.subtitle,
+    this.trailing,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -120,6 +128,10 @@ class _WorkspaceTile extends StatelessWidget {
               ],
             ),
           ),
+          if (trailing != null) ...<Widget>[
+            const SizedBox(width: 12),
+            trailing!,
+          ],
         ],
       ),
     );

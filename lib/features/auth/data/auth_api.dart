@@ -31,13 +31,13 @@ class AuthApi {
     final data = {
       'name': name,
       'email': email,
-        'password': password,
-        'role': role,
+      'password': password,
+      'role': role,
     };
 
     if (organization != null) {
       data['organization'] = organization;
-  }
+    }
 
     final response = await _apiClient.postJson(
       '/auth/register',
@@ -70,14 +70,15 @@ class AuthApi {
     required String accessToken,
     String? refreshToken,
   }) async {
-    final data = <String, dynamic>{'accessToken': accessToken};
-    if (refreshToken != null) {
+    final data = <String, dynamic>{};
+    if (refreshToken != null && refreshToken.trim().isNotEmpty) {
       data['refreshToken'] = refreshToken;
-}
+    }
 
     await _apiClient.postJson(
       '/auth/logout',
-      data: data,
+      bearerToken: accessToken,
+      data: data.isEmpty ? null : data,
     );
   }
 }

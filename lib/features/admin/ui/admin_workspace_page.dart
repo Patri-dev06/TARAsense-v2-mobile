@@ -4,7 +4,7 @@ import 'package:tarasense_mobile/core/theme/tara_theme.dart';
 import 'package:tarasense_mobile/core/widgets/tara_brand_lockup.dart';
 import 'package:tarasense_mobile/features/auth/state/auth_providers.dart';
 
-enum _AdminView { dashboard, users, studies, logs }
+enum _AdminView { dashboard, users, studies, logs, settings }
 
 class AdminWorkspacePage extends ConsumerStatefulWidget {
   const AdminWorkspacePage({super.key});
@@ -94,12 +94,13 @@ class _AdminWorkspacePageState extends ConsumerState<AdminWorkspacePage> {
             children: <Widget>[
               _AdminHeader(
                 name: session?.user.name ?? 'Admin',
-                onLogout: authState.isBusy
-                    ? null
-                    : () => ref.read(authControllerProvider.notifier).logout(),
               ),
               const SizedBox(height: 18),
-              _buildView(),
+              _buildView(
+                authBusy: authState.isBusy,
+                onLogout: () =>
+                    ref.read(authControllerProvider.notifier).logout(),
+              ),
             ],
           ),
         ),
@@ -111,7 +112,10 @@ class _AdminWorkspacePageState extends ConsumerState<AdminWorkspacePage> {
     );
   }
 
-  Widget _buildView() {
+  Widget _buildView({
+    required bool authBusy,
+    required VoidCallback onLogout,
+  }) {
     switch (_currentView) {
       case _AdminView.dashboard:
         return _AdminDashboardBody(
@@ -139,51 +143,49 @@ class _AdminWorkspacePageState extends ConsumerState<AdminWorkspacePage> {
         );
       case _AdminView.logs:
         return _AuditLogPanel(auditLog: _auditLog);
+      case _AdminView.settings:
+        return _AdminSettingsPanel(
+          name: ref.watch(authControllerProvider).session?.user.name ?? 'Admin',
+          authBusy: authBusy,
+          onLogout: onLogout,
+        );
     }
   }
 }
 
 class _AdminHeader extends StatelessWidget {
-  const _AdminHeader({required this.name, required this.onLogout});
+  const _AdminHeader({required this.name});
 
   final String name;
-  final VoidCallback? onLogout;
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: <Widget>[
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Align(
-                alignment: Alignment.centerRight,
-                child: Icon(
-                  Icons.more_horiz_rounded,
-                  size: 20,
-                  color: TaraTheme.textPrimary.withValues(alpha: 0.62),
-                ),
-              ),
-              const SizedBox(height: 4),
-              const TaraBrandLockup(markSize: 16, textSize: 18),
-              const SizedBox(height: 1),
+              const TaraBrandLockup(markSize: 18, textSize: 20),
+              const SizedBox(height: 3),
               Text(
                 'Admin panel',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: TaraTheme.textPrimary,
-                  fontSize: 11,
-                  height: 1.1,
+                  color: TaraTheme.textSecondary,
+                  fontSize: 12,
+                  height: 1,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(width: 10),
-        IconButton(
-          onPressed: onLogout,
-          icon: Text(
+        const SizedBox(width: 12),
+        CircleAvatar(
+          radius: 18,
+          backgroundColor: TaraTheme.primaryTint,
+          child: Text(
             _adminInitials(name),
             style: const TextStyle(
               color: TaraTheme.primaryDark,
@@ -191,10 +193,36 @@ class _AdminHeader extends StatelessWidget {
               fontWeight: FontWeight.w900,
             ),
           ),
-          style: IconButton.styleFrom(
-            backgroundColor: TaraTheme.primaryTint,
-            fixedSize: const Size(36, 36),
-            shape: const CircleBorder(),
+        ),
+      ],
+    );
+  }
+}
+
+class _AdminSettingsPanel extends StatelessWidget {
+  const _AdminSettingsPanel({
+    required this.name,
+    required this.authBusy,
+    required this.onLogout,
+  });
+
+  final String name;
+  final bool authBusy;
+  final VoidCallback onLogout;
+
+  @override
+  Widget build(BuildContext context) {
+    return _AdminListPanel(
+      title: 'Settings',
+      children: <Widget>[
+        _AdminSimpleRow(title: name, detail: 'Administrator account'),
+        OutlinedButton.icon(
+          onPressed: authBusy ? null : onLogout,
+          icon: const Icon(Icons.logout_rounded, size: 16),
+          label: const Text('Log out'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: TaraTheme.roseText,
+            side: const BorderSide(color: Color(0xFFFECDD3)),
           ),
         ),
       ],
@@ -385,7 +413,7 @@ class _RoleRequestRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final Widget identity = Row(
       children: <Widget>[
         CircleAvatar(
           radius: 17,
@@ -428,11 +456,38 @@ class _RoleRequestRow extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(width: 8),
+      ],
+    );
+    final Widget actions = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
         _AdminActionButton(label: 'Approve', primary: true, onTap: onApprove),
-        const SizedBox(width: 5),
+        const SizedBox(width: 6),
         _AdminActionButton(label: 'Deny', primary: false, onTap: onDeny),
       ],
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 330) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              identity,
+              const SizedBox(height: 8),
+              Align(alignment: Alignment.centerRight, child: actions),
+            ],
+          );
+        }
+
+        return Row(
+          children: <Widget>[
+            Expanded(child: identity),
+            const SizedBox(width: 10),
+            actions,
+          ],
+        );
+      },
     );
   }
 }
@@ -653,41 +708,49 @@ class _AdminBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 58,
+    return DecoratedBox(
       decoration: const BoxDecoration(
         color: TaraTheme.surface,
         border: Border(top: BorderSide(color: TaraTheme.border)),
       ),
       child: SafeArea(
         top: false,
-        child: Row(
-          children: <Widget>[
-            _AdminNavItem(
-              icon: Icons.grid_view_rounded,
-              label: 'Dashboard',
-              selected: currentView == _AdminView.dashboard,
-              onTap: () => onChanged(_AdminView.dashboard),
-            ),
-            _AdminNavItem(
-              icon: Icons.person_outline_rounded,
-              label: 'Users',
-              selected: currentView == _AdminView.users,
-              onTap: () => onChanged(_AdminView.users),
-            ),
-            _AdminNavItem(
-              icon: Icons.article_outlined,
-              label: 'Studies',
-              selected: currentView == _AdminView.studies,
-              onTap: () => onChanged(_AdminView.studies),
-            ),
-            _AdminNavItem(
-              icon: Icons.format_align_center_rounded,
-              label: 'Logs',
-              selected: currentView == _AdminView.logs,
-              onTap: () => onChanged(_AdminView.logs),
-            ),
-          ],
+        child: SizedBox(
+          height: 58,
+          child: Row(
+            children: <Widget>[
+              _AdminNavItem(
+                icon: Icons.grid_view_rounded,
+                label: 'Dashboard',
+                selected: currentView == _AdminView.dashboard,
+                onTap: () => onChanged(_AdminView.dashboard),
+              ),
+              _AdminNavItem(
+                icon: Icons.person_outline_rounded,
+                label: 'Users',
+                selected: currentView == _AdminView.users,
+                onTap: () => onChanged(_AdminView.users),
+              ),
+              _AdminNavItem(
+                icon: Icons.article_outlined,
+                label: 'Studies',
+                selected: currentView == _AdminView.studies,
+                onTap: () => onChanged(_AdminView.studies),
+              ),
+              _AdminNavItem(
+                icon: Icons.format_align_center_rounded,
+                label: 'Logs',
+                selected: currentView == _AdminView.logs,
+                onTap: () => onChanged(_AdminView.logs),
+              ),
+              _AdminNavItem(
+                icon: Icons.settings_outlined,
+                label: 'Settings',
+                selected: currentView == _AdminView.settings,
+                onTap: () => onChanged(_AdminView.settings),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -713,8 +776,7 @@ class _AdminNavItem extends StatelessWidget {
     return Expanded(
       child: InkWell(
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.only(top: 7),
+        child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
@@ -722,6 +784,8 @@ class _AdminNavItem extends StatelessWidget {
               const SizedBox(height: 3),
               Text(
                 label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: color,
                   fontSize: 8,

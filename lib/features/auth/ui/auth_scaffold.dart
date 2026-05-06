@@ -137,6 +137,43 @@ class AuthErrorMessage extends StatelessWidget {
   }
 }
 
+class AuthButtonContent extends StatelessWidget {
+  const AuthButtonContent({
+    required this.isLoading,
+    required this.label,
+    this.loadingLabel,
+    super.key,
+  });
+
+  final bool isLoading;
+  final String label;
+  final String? loadingLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isLoading) {
+      return Text(label);
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: <Widget>[
+        const SizedBox(
+          height: 16,
+          width: 16,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(loadingLabel ?? label),
+      ],
+    );
+  }
+}
+
 class _AuthLoadingScreen extends StatefulWidget {
   const _AuthLoadingScreen({required this.message});
 
@@ -150,6 +187,7 @@ class _AuthLoadingScreenState extends State<_AuthLoadingScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _scale;
+  late final Animation<double> _turns;
 
   @override
   void initState() {
@@ -159,6 +197,9 @@ class _AuthLoadingScreenState extends State<_AuthLoadingScreen>
       duration: const Duration(milliseconds: 850),
     )..repeat(reverse: true);
     _scale = Tween<double>(begin: 0.92, end: 1.08).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
+    );
+    _turns = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
     );
   }
@@ -199,33 +240,9 @@ class _AuthLoadingScreenState extends State<_AuthLoadingScreen>
                 children: <Widget>[
                   ScaleTransition(
                     scale: _scale,
-                    child: SizedBox(
-                      height: 58,
-                      width: 58,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: <Widget>[
-                          const SizedBox.expand(
-                            child: CircularProgressIndicator(
-                              strokeWidth: 4,
-                              color: TaraTheme.primary,
-                            ),
-                          ),
-                          Container(
-                            height: 34,
-                            width: 34,
-                            decoration: BoxDecoration(
-                              color: TaraTheme.primaryTint,
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: const Icon(
-                              Icons.lock_open_rounded,
-                              color: TaraTheme.primary,
-                              size: 18,
-                            ),
-                          ),
-                        ],
-                      ),
+                    child: RotationTransition(
+                      turns: _turns,
+                      child: const _TaraLoadingMark(),
                     ),
                   ),
                   const SizedBox(height: 18),
@@ -245,6 +262,58 @@ class _AuthLoadingScreenState extends State<_AuthLoadingScreen>
                   ),
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TaraLoadingMark extends StatelessWidget {
+  const _TaraLoadingMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 70,
+      width: 70,
+      child: Stack(
+        alignment: Alignment.center,
+        children: <Widget>[
+          Container(
+            height: 70,
+            width: 70,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(999),
+              gradient: const SweepGradient(
+                colors: <Color>[
+                  TaraTheme.primary,
+                  Color(0xFFFFC48A),
+                  TaraTheme.primary,
+                ],
+              ),
+            ),
+          ),
+          Container(
+            height: 58,
+            width: 58,
+            decoration: BoxDecoration(
+              color: TaraTheme.surface,
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
+          Container(
+            height: 38,
+            width: 38,
+            decoration: BoxDecoration(
+              color: TaraTheme.primaryTint,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: const Icon(
+              Icons.lock_open_rounded,
+              color: TaraTheme.primary,
+              size: 20,
             ),
           ),
         ],

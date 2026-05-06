@@ -191,8 +191,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     if (text.isEmpty) {
                       return 'Enter your password';
                     }
-                    if (text.length < 8) {
-                      return 'Password must be at least 8 characters';
+                    if (text.length < 6) {
+                      return 'Password must be at least 6 characters';
                     }
                     return null;
                   },
@@ -248,14 +248,18 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   width: double.infinity,
                   child: FilledButton(
                     onPressed: authState.isBusy ? null : _submit,
-                    child: const Text('Log in'),
+                    child: AuthButtonContent(
+                      isLoading: authState.isBusy,
+                      label: 'Log in',
+                      loadingLabel: 'Logging in...',
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
-                    onPressed: () => context.go('/register'),
+                    onPressed: authState.isBusy ? null : () => context.go('/register'),
                     child: const Text('Create account'),
                   ),
                 ),
@@ -270,7 +274,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         style: theme.textTheme.bodyMedium,
                       ),
                       TextButton(
-                        onPressed: () => context.go('/register'),
+                        onPressed: authState.isBusy ? null : () => context.go('/register'),
                         child: const Text('Sign up'),
                       ),
                     ],

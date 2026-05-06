@@ -363,13 +363,6 @@ class _HomePageState extends ConsumerState<HomePage> {
             icon: const Icon(Icons.api_rounded),
             tooltip: 'API test',
           ),
-          IconButton(
-            onPressed: authState.isBusy
-                ? null
-                : () => ref.read(authControllerProvider.notifier).logout(),
-            icon: const Icon(Icons.logout_rounded),
-            tooltip: 'Log out',
-          ),
           const SizedBox(width: 8),
         ],
       ),
@@ -971,9 +964,9 @@ class _WorkspaceToolsSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           const _SectionHeader(
-            title: 'Workspace Tools',
+            title: 'Settings',
             description:
-                'Keep the current mobile-safe actions close while the rest of the app catches up.',
+                'Manage account actions and mobile-safe workspace tools.',
           ),
           const SizedBox(height: 18),
           _ToolButton(

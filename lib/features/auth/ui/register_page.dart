@@ -16,7 +16,6 @@ class RegisterPage extends ConsumerStatefulWidget {
 class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _organizationController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
@@ -28,7 +27,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   @override
   void dispose() {
     _nameController.dispose();
-    _organizationController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -46,9 +44,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         .read(authControllerProvider.notifier)
         .register(
           name: _nameController.text.trim(),
-          organization: _organizationController.text.trim().isEmpty
-              ? null
-              : _organizationController.text.trim(),
+          organization: null,
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
           role: _selectedRole,
@@ -98,7 +94,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       child: AuthScaffold(
         title: 'Create an account',
         subtitle:
-            'Use your name, organization, email, and password to get started.',
+            'Use your name, email, password, and account type to get started.',
         isLoading: authState.isBusy,
         loadingMessage: 'Creating account...',
         isSuccess: _registrationSucceeded,
@@ -154,43 +150,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   },
                 ),
                 const SizedBox(height: 14),
-                Text('Organization', style: theme.textTheme.labelLarge),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _organizationController,
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    hintText: 'Company or institution (optional)',
-                    prefixIcon: Icon(Icons.business_outlined),
-                  ),
-                  onTapOutside: (_) => FocusScope.of(context).unfocus(),
-                ),
-                const SizedBox(height: 14),
                 Text('Account type', style: theme.textTheme.labelLarge),
                 const SizedBox(height: 8),
-                SegmentedButton<String>(
-                  segments: const <ButtonSegment<String>>[
-                    ButtonSegment<String>(
-                      value: 'MSME',
-                      label: Text('MSME'),
-                      icon: Icon(Icons.storefront_outlined),
-                    ),
-                    ButtonSegment<String>(
-                      value: 'FIC',
-                      label: Text('FIC'),
-                      icon: Icon(Icons.science_outlined),
-                    ),
-                    ButtonSegment<String>(
-                      value: 'CONSUMER',
-                      label: Text('Tester'),
-                      icon: Icon(Icons.fact_check_outlined),
-                    ),
-                  ],
-                  selected: <String>{_selectedRole},
-                  onSelectionChanged: (Set<String> selected) {
-                    setState(() {
-                      _selectedRole = selected.first;
-                    });
+                _AccountTypeSelector(
+                  selectedRole: _selectedRole,
+                  onChanged: (String value) {
+                    setState(() => _selectedRole = value);
                   },
                 ),
                 const SizedBox(height: 14),
@@ -229,7 +194,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   textInputAction: TextInputAction.done,
                   autofillHints: const <String>[AutofillHints.newPassword],
                   decoration: InputDecoration(
-                    hintText: 'At least 8 characters',
+                    hintText: 'At least 6 characters',
                     prefixIcon: const Icon(Icons.lock_outline_rounded),
                     suffixIcon: IconButton(
                       onPressed: () {
@@ -255,8 +220,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     if (text.isEmpty) {
                       return 'Enter your password';
                     }
-                    if (text.length < 8) {
-                      return 'Password must be at least 8 characters';
+                    if (text.length < 6) {
+                      return 'Password must be at least 6 characters';
                     }
                     return null;
                   },
@@ -286,7 +251,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       ),
                       const _ChecklistItem(
                         text:
-                            'Organization is optional and can be updated later.',
+                            'Choose Consumer if you are applying for available studies.',
                       ),
                       const _ChecklistItem(
                         text:
@@ -304,14 +269,18 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   width: double.infinity,
                   child: FilledButton(
                     onPressed: authState.isBusy ? null : _submit,
-                    child: const Text('Create account'),
+                    child: AuthButtonContent(
+                      isLoading: authState.isBusy,
+                      label: 'Create account',
+                      loadingLabel: 'Creating account...',
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
-                    onPressed: () => context.go('/login'),
+                    onPressed: authState.isBusy ? null : () => context.go('/login'),
                     child: const Text('Back to log in'),
                   ),
                 ),
@@ -326,7 +295,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                         style: theme.textTheme.bodyMedium,
                       ),
                       TextButton(
-                        onPressed: () => context.go('/login'),
+                        onPressed: authState.isBusy ? null : () => context.go('/login'),
                         child: const Text('Log in'),
                       ),
                     ],
@@ -348,6 +317,107 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       ),
     );
   }
+}
+
+class _AccountTypeSelector extends StatelessWidget {
+  const _AccountTypeSelector({
+    required this.selectedRole,
+    required this.onChanged,
+  });
+
+  final String selectedRole;
+  final ValueChanged<String> onChanged;
+
+  static const List<_AccountTypeOption> _options = <_AccountTypeOption>[
+    _AccountTypeOption(
+      value: 'MSME',
+      label: 'MSME',
+      icon: Icons.storefront_outlined,
+    ),
+    _AccountTypeOption(
+      value: 'FIC',
+      label: 'FIC',
+      icon: Icons.science_outlined,
+    ),
+    _AccountTypeOption(
+      value: 'CONSUMER',
+      label: 'Consumer',
+      icon: Icons.person_search_outlined,
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 42,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: TaraTheme.border),
+      ),
+      child: Row(
+        children: _options.map((option) {
+          final bool selected = option.value == selectedRole;
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: InkWell(
+                onTap: () => onChanged(option.value),
+                borderRadius: BorderRadius.circular(999),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(horizontal: 7),
+                  decoration: BoxDecoration(
+                    color: selected ? TaraTheme.primary : Colors.transparent,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Icon(
+                        selected ? Icons.check_rounded : option.icon,
+                        size: 14,
+                        color: selected ? Colors.white : TaraTheme.textPrimary,
+                      ),
+                      const SizedBox(width: 5),
+                      Flexible(
+                        child: Text(
+                          option.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: selected ? Colors.white : TaraTheme.textPrimary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                            height: 1,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+class _AccountTypeOption {
+  const _AccountTypeOption({
+    required this.value,
+    required this.label,
+    required this.icon,
+  });
+
+  final String value;
+  final String label;
+  final IconData icon;
 }
 
 class _ChecklistItem extends StatelessWidget {
