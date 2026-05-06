@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tarasense_mobile/core/theme/tara_theme.dart';
 import 'package:tarasense_mobile/features/auth/state/auth_providers.dart';
+import 'package:tarasense_mobile/features/auth/ui/auth_loading_dialog.dart';
 
 part 'tester_mobile_portal.dart';
 part 'tester_desktop_shell.dart';
@@ -59,12 +60,17 @@ class _TesterWorkspacePageState extends ConsumerState<TesterWorkspacePage> {
       return _ConsumerMobilePortal(
         currentView: _currentView,
         userName: session?.user.name ?? 'Consumer',
+        email: session?.user.email ?? '',
+        organization: session?.user.organization,
         searchController: _searchController,
         onViewChanged: (view) => setState(() => _currentView = view),
         authBusy: authState.isBusy,
         onLogout: authState.isBusy
             ? null
-            : () => ref.read(authControllerProvider.notifier).logout(),
+            : () => showLogoutLoadingAndRun(
+                  context,
+                  () => ref.read(authControllerProvider.notifier).logout(),
+                ),
       );
     }
 
@@ -80,24 +86,23 @@ class _TesterWorkspacePageState extends ConsumerState<TesterWorkspacePage> {
             Expanded(
               child: Column(
                 children: <Widget>[
-                  _ConsumerTopBar(
-                    searchController: _searchController,
-                    showMobileBrand: !useSidebar,
-                  ),
                   Expanded(
                     child: _ConsumerContent(
                       currentView: _currentView,
                       userName: session?.user.name ?? 'Consumer',
                       email: session?.user.email ?? '',
                       organization: session?.user.organization,
+                      searchController: _searchController,
                       msmeReasonController: _msmeReasonController,
                       ficReasonController: _ficReasonController,
                       onViewChanged: (view) =>
                           setState(() => _currentView = view),
                       onSubmitApplication: _submitRoleApplication,
                       authBusy: authState.isBusy,
-                      onLogout: () =>
-                          ref.read(authControllerProvider.notifier).logout(),
+                      onLogout: () => showLogoutLoadingAndRun(
+                        context,
+                        () => ref.read(authControllerProvider.notifier).logout(),
+                      ),
                     ),
                   ),
                 ],

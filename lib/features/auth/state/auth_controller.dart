@@ -125,25 +125,29 @@ class AuthController extends Notifier<AuthState> {
 
   Future<void> logout() async {
     if (AppConfig.uiPreviewMode) {
-      state = AuthState.authenticated(_previewSession);
+      state = AuthState.unauthenticated();
       return;
     }
     final currentSession = state.session;
     state = state.copyWith(isBusy: true, clearError: true);
 
-    if (currentSession != null) {
-      try {
-        await _authApi.logout(
-          accessToken: currentSession.tokens.accessToken,
-          refreshToken: currentSession.tokens.refreshToken,
-        );
-      } catch (_) {
-        // Ignore network errors on logout; we still clear local session.
-      }
-    }
-
     await _tokenStorage.clear();
     state = AuthState.unauthenticated();
+
+    if (currentSession != null) {
+      unawaited(_logoutServerSession(currentSession.tokens));
+    }
+  }
+
+  Future<void> _logoutServerSession(AuthTokens tokens) async {
+    try {
+      await _authApi.logout(
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      );
+    } catch (_) {
+      // Ignore network errors on logout; the local session is already cleared.
+    }
   }
 
   Future<AuthSession?> _hydrateSession(AuthTokens tokens) async {

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tarasense_mobile/core/theme/tara_theme.dart';
 import 'package:tarasense_mobile/core/widgets/tara_brand_lockup.dart';
 import 'package:tarasense_mobile/features/auth/state/auth_providers.dart';
+import 'package:tarasense_mobile/features/auth/ui/auth_loading_dialog.dart';
 import 'package:tarasense_mobile/features/home/data/system_api.dart';
 
 enum _WorkspaceRole { msme, fic, participant, admin, other }
@@ -479,13 +480,19 @@ class _HomePageState extends ConsumerState<HomePage> {
             ] else ...<Widget>[_RoleFocusSection(role: role)],
             const SizedBox(height: 22),
             _WorkspaceToolsSection(
+              name: session.user.name,
+              email: session.user.email,
+              role: roleLabel,
+              organization: session.user.organization,
               authBusy: authState.isBusy,
               checkingHealth: _checkingHealth,
               onRefreshProfile: _refreshProfile,
               onCheckHealth: _checkHealth,
               onOpenApiTest: () => context.go('/api-test'),
-              onLogout: () =>
-                  ref.read(authControllerProvider.notifier).logout(),
+              onLogout: () => showLogoutLoadingAndRun(
+                context,
+                () => ref.read(authControllerProvider.notifier).logout(),
+              ),
             ),
           ],
         ),
@@ -936,6 +943,10 @@ class _RoleFocusSection extends StatelessWidget {
 
 class _WorkspaceToolsSection extends StatelessWidget {
   const _WorkspaceToolsSection({
+    required this.name,
+    required this.email,
+    required this.role,
+    required this.organization,
     required this.authBusy,
     required this.checkingHealth,
     required this.onRefreshProfile,
@@ -944,6 +955,10 @@ class _WorkspaceToolsSection extends StatelessWidget {
     required this.onLogout,
   });
 
+  final String name;
+  final String email;
+  final String role;
+  final String? organization;
   final bool authBusy;
   final bool checkingHealth;
   final Future<void> Function() onRefreshProfile;
@@ -964,11 +979,18 @@ class _WorkspaceToolsSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           const _SectionHeader(
-            title: 'Settings',
+            title: 'Profile',
             description:
-                'Manage account actions and mobile-safe workspace tools.',
+                'Review your account details and mobile-safe workspace tools.',
           ),
           const SizedBox(height: 18),
+          _SettingsIdentityCard(
+            name: name,
+            email: email,
+            role: role,
+            organization: organization,
+          ),
+          const SizedBox(height: 12),
           _ToolButton(
             icon: Icons.refresh_rounded,
             label: 'Refresh Profile',
@@ -1005,6 +1027,95 @@ class _WorkspaceToolsSection extends StatelessWidget {
       ),
     );
   }
+}
+
+class _SettingsIdentityCard extends StatelessWidget {
+  const _SettingsIdentityCard({
+    required this.name,
+    required this.email,
+    required this.role,
+    required this.organization,
+  });
+
+  final String name;
+  final String email;
+  final String role;
+  final String? organization;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: TaraTheme.background,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: TaraTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          _SettingsFormGrid(
+            fields: <_SettingsField>[
+              _SettingsField(label: 'Name', value: name),
+              _SettingsField(label: 'Email', value: email),
+              _SettingsField(label: 'Role', value: role),
+              if (organization != null && organization!.trim().isNotEmpty)
+                _SettingsField(
+                  label: 'Organization',
+                  value: organization!.trim(),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SettingsFormGrid extends StatelessWidget {
+  const _SettingsFormGrid({required this.fields});
+
+  final List<_SettingsField> fields;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final bool twoColumns = constraints.maxWidth >= 560;
+        final double width = twoColumns
+            ? (constraints.maxWidth - 12) / 2
+            : constraints.maxWidth;
+
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: fields
+              .map(
+                (_SettingsField field) => SizedBox(
+                  width: width,
+                  child: TextFormField(
+                    initialValue: field.value.isEmpty ? '-' : field.value,
+                    readOnly: true,
+                    decoration: InputDecoration(labelText: field.label),
+                  ),
+                ),
+              )
+              .toList(),
+        );
+      },
+    );
+  }
+}
+
+class _SettingsField {
+  const _SettingsField({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
 }
 
 class _MessageCard extends StatelessWidget {

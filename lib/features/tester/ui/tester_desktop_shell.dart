@@ -56,12 +56,6 @@ class _ConsumerSidebar extends StatelessWidget {
             onTap: () => onViewChanged(_ConsumerView.dashboard),
           ),
           _ConsumerNavButton(
-            icon: Icons.person_outline_rounded,
-            label: 'Profile',
-            selected: currentView == _ConsumerView.profile,
-            onTap: () => onViewChanged(_ConsumerView.profile),
-          ),
-          _ConsumerNavButton(
             icon: Icons.explore_outlined,
             label: 'Available Surveys',
             badge: '3',
@@ -83,8 +77,8 @@ class _ConsumerSidebar extends StatelessWidget {
             onTap: () => onViewChanged(_ConsumerView.roleApplications),
           ),
           _ConsumerNavButton(
-            icon: Icons.settings_outlined,
-            label: 'Settings',
+            icon: Icons.person_outline_rounded,
+            label: 'Profile',
             selected: currentView == _ConsumerView.settings,
             onTap: () => onViewChanged(_ConsumerView.settings),
           ),
@@ -95,137 +89,13 @@ class _ConsumerSidebar extends StatelessWidget {
   }
 }
 
-class _ConsumerTopBar extends StatelessWidget {
-  const _ConsumerTopBar({
-    required this.searchController,
-    required this.showMobileBrand,
-  });
-
-  final TextEditingController searchController;
-  final bool showMobileBrand;
-
-  @override
-  Widget build(BuildContext context) {
-    if (showMobileBrand) {
-      return Container(
-        padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
-        decoration: const BoxDecoration(
-          color: TaraTheme.surface,
-          border: Border(bottom: BorderSide(color: TaraTheme.border)),
-        ),
-        child: Column(
-          children: <Widget>[
-            Row(
-              children: <Widget>[
-                const _ConsumerWordmark(textSize: 24),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _ConsumerSearchField(controller: searchController),
-            const SizedBox(height: 12),
-            Row(
-              children: <Widget>[
-                const _TopChip(label: 'Consumer panel'),
-                const Spacer(),
-                _DateChip(date: DateTime.now()),
-              ],
-            ),
-          ],
-        ),
-      );
-    }
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final bool compact = constraints.maxWidth < 760;
-
-        return Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: compact ? 18 : 28,
-            vertical: 12,
-          ),
-          decoration: const BoxDecoration(
-            color: TaraTheme.surface,
-            border: Border(bottom: BorderSide(color: TaraTheme.border)),
-          ),
-          child: compact
-              ? Column(
-                  children: <Widget>[
-                    Row(
-                      children: <Widget>[
-                        IconButton(
-                          onPressed: () {},
-                          icon: const Icon(Icons.keyboard_tab_outlined),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _ConsumerSearchField(
-                            controller: searchController,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: <Widget>[
-                        const _TopChip(label: 'Consumer panel'),
-                        const Spacer(),
-                        _DateChip(date: DateTime.now()),
-                      ],
-                    ),
-                  ],
-                )
-              : Row(
-                  children: <Widget>[
-                    IconButton(
-                      onPressed: () {},
-                      icon: const Icon(Icons.keyboard_tab_outlined),
-                      style: IconButton.styleFrom(
-                        backgroundColor: TaraTheme.surface,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          side: const BorderSide(color: TaraTheme.border),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 520),
-                        child: _ConsumerSearchField(
-                          controller: searchController,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    const _TopChip(label: 'Consumer panel'),
-                    const SizedBox(width: 10),
-                    IconButton(
-                      onPressed: () {},
-                      icon: const Icon(Icons.notifications_none_rounded),
-                      style: IconButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(999),
-                          side: const BorderSide(color: TaraTheme.border),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    _DateChip(date: DateTime.now()),
-                  ],
-                ),
-        );
-      },
-    );
-  }
-}
-
 class _ConsumerContent extends StatelessWidget {
   const _ConsumerContent({
     required this.currentView,
     required this.userName,
     required this.email,
     required this.organization,
+    required this.searchController,
     required this.msmeReasonController,
     required this.ficReasonController,
     required this.onViewChanged,
@@ -238,6 +108,7 @@ class _ConsumerContent extends StatelessWidget {
   final String userName;
   final String email;
   final String? organization;
+  final TextEditingController searchController;
   final TextEditingController msmeReasonController;
   final TextEditingController ficReasonController;
   final ValueChanged<_ConsumerView> onViewChanged;
@@ -255,7 +126,7 @@ class _ConsumerContent extends StatelessWidget {
         28,
       ),
       children: <Widget>[
-        const _ConsumerPageHeader(),
+        _ConsumerPageHeader(userName: userName),
         const SizedBox(height: 20),
         const _ConsumerStatsGrid(),
         const SizedBox(height: 22),
@@ -277,7 +148,7 @@ class _ConsumerContent extends StatelessWidget {
           organization: organization,
         );
       case _ConsumerView.availableSurveys:
-        return const _AvailableSurveysPanel();
+        return _AvailableSurveysPanel(searchController: searchController);
       case _ConsumerView.completedSurveys:
         return const _CompletedSurveysPanel();
       case _ConsumerView.roleApplications:
@@ -290,6 +161,7 @@ class _ConsumerContent extends StatelessWidget {
         return _ConsumerSettingsPanel(
           userName: userName,
           email: email,
+          organization: organization,
           authBusy: authBusy,
           onLogout: onLogout,
         );
@@ -301,80 +173,138 @@ class _ConsumerSettingsPanel extends StatelessWidget {
   const _ConsumerSettingsPanel({
     required this.userName,
     required this.email,
+    required this.organization,
     required this.authBusy,
     required this.onLogout,
   });
 
   final String userName;
   final String email;
+  final String? organization;
   final bool authBusy;
   final VoidCallback onLogout;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: TaraTheme.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: TaraTheme.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text('Settings', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          Text(
-            email.isEmpty ? userName : '$userName\n$email',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 18),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: authBusy ? null : onLogout,
-              icon: const Icon(Icons.logout_rounded),
-              label: const Text('Log out'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: TaraTheme.roseText,
-                side: const BorderSide(color: Color(0xFFFECDD3)),
+    return SizedBox(
+      height: MediaQuery.sizeOf(context).height - 190,
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: TaraTheme.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: TaraTheme.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text('Profile', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 16),
+            _ConsumerSettingsFormGrid(
+              fields: <_ConsumerSettingsField>[
+                _ConsumerSettingsField(label: 'Name', value: userName),
+                _ConsumerSettingsField(label: 'Email', value: email),
+                const _ConsumerSettingsField(label: 'Role', value: 'Consumer'),
+                if (organization != null && organization!.trim().isNotEmpty)
+                  _ConsumerSettingsField(
+                    label: 'Organization',
+                    value: organization!.trim(),
+                  ),
+              ],
+            ),
+            const Spacer(),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: authBusy ? null : onLogout,
+                icon: const Icon(Icons.logout_rounded),
+                label: const Text('Log out'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: TaraTheme.roseText,
+                  side: const BorderSide(color: Color(0xFFFECDD3)),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
-class _ConsumerPageHeader extends StatelessWidget {
-  const _ConsumerPageHeader();
+class _ConsumerSettingsFormGrid extends StatelessWidget {
+  const _ConsumerSettingsFormGrid({required this.fields});
+
+  final List<_ConsumerSettingsField> fields;
 
   @override
   Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final bool twoColumns = constraints.maxWidth >= 620;
+        final double fieldWidth = twoColumns
+            ? (constraints.maxWidth - 12) / 2
+            : constraints.maxWidth;
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: fields
+              .map(
+                (_ConsumerSettingsField field) => SizedBox(
+                  width: fieldWidth,
+                  child: TextFormField(
+                    initialValue: field.value.isEmpty ? '-' : field.value,
+                    readOnly: true,
+                    decoration: InputDecoration(labelText: field.label),
+                  ),
+                ),
+              )
+              .toList(),
+        );
+      },
+    );
+  }
+}
+
+class _ConsumerSettingsField {
+  const _ConsumerSettingsField({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+}
+
+class _ConsumerPageHeader extends StatelessWidget {
+  const _ConsumerPageHeader({required this.userName});
+
+  final String userName;
+
+  @override
+  Widget build(BuildContext context) {
+    final String displayName = userName.trim().isEmpty
+        ? 'Consumer'
+        : userName.trim();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(
-          'CONSUMER WORKSPACE',
+          'Good morning,',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: const Color(0xFF52657D),
             fontWeight: FontWeight.w600,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         Text(
-          'Consumer Dashboard',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+          displayName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
             color: const Color(0xFF061A3A),
             letterSpacing: 0,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Track study invitations, apply for role upgrades, and manage your participation flow.',
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: const Color(0xFF52657D),
           ),
         ),
       ],

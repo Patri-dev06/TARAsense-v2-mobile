@@ -75,11 +75,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       if (path == '/splash') {
-        return '/';
+        return '/login';
       }
 
       if (_isRoleWorkspace(path) || path == '/api-test') {
-        return '/';
+        return '/login';
       }
 
       return null;

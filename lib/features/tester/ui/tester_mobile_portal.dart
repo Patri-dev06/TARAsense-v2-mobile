@@ -4,6 +4,8 @@ class _ConsumerMobilePortal extends StatelessWidget {
   const _ConsumerMobilePortal({
     required this.currentView,
     required this.userName,
+    required this.email,
+    required this.organization,
     required this.searchController,
     required this.onViewChanged,
     required this.authBusy,
@@ -12,6 +14,8 @@ class _ConsumerMobilePortal extends StatelessWidget {
 
   final _ConsumerView currentView;
   final String userName;
+  final String email;
+  final String? organization;
   final TextEditingController searchController;
   final ValueChanged<_ConsumerView> onViewChanged;
   final bool authBusy;
@@ -29,14 +33,23 @@ class _ConsumerMobilePortal extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
           children: <Widget>[
-            _ConsumerMobileHeader(userName: userName),
-            const SizedBox(height: 14),
-            _ConsumerMobileSearchField(controller: searchController),
-            const SizedBox(height: 10),
-            const _ConsumerMobileFilterRail(),
-            const SizedBox(height: 16),
+            if (currentView == _ConsumerView.settings) ...<Widget>[
+              const _ConsumerMobileBrandHeader(),
+              const SizedBox(height: 14),
+            ] else ...<Widget>[
+              _ConsumerMobileHeader(userName: userName),
+              const SizedBox(height: 14),
+            ],
+            if (currentView != _ConsumerView.settings) ...<Widget>[
+              _ConsumerMobileFilterRail(
+                currentView: currentView,
+                onViewChanged: onViewChanged,
+              ),
+              const SizedBox(height: 16),
+            ],
             if (showDiscover)
               _ConsumerDiscoverBody(
+                searchController: searchController,
                 onApply: () => onViewChanged(_ConsumerView.roleApplications),
               )
             else if (currentView == _ConsumerView.profile)
@@ -49,6 +62,8 @@ class _ConsumerMobilePortal extends StatelessWidget {
             else if (currentView == _ConsumerView.settings)
               _ConsumerMobileSettingsCard(
                 userName: userName,
+                email: email,
+                organization: organization,
                 authBusy: authBusy,
                 onLogout: onLogout,
               )
@@ -72,58 +87,43 @@ class _ConsumerMobileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final String displayName = userName.trim().isEmpty
+        ? 'Consumer'
+        : userName.trim();
+
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Align(
-                alignment: Alignment.centerRight,
-                child: Icon(
-                  Icons.more_horiz_rounded,
-                  size: 20,
-                  color: TaraTheme.textPrimary.withValues(alpha: 0.62),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Good morning,',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: TaraTheme.textPrimary,
-                  fontSize: 11,
-                  height: 1,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                userName.trim().isEmpty ? 'Consumer' : userName.trim(),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontSize: 20,
-                  height: 1,
-                  letterSpacing: 0,
-                ),
-              ),
-            ],
+        Text(
+          'Good morning,',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: TaraTheme.textPrimary,
+            fontSize: 11,
+            height: 1,
           ),
         ),
-        const SizedBox(width: 10),
-        CircleAvatar(
-          backgroundColor: TaraTheme.primaryTint,
-          child: Text(
-            _consumerInitials(userName),
-            style: const TextStyle(
-              color: TaraTheme.primaryDark,
-              fontSize: 11,
-              fontWeight: FontWeight.w900,
-            ),
+        const SizedBox(height: 4),
+        Text(
+          displayName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontSize: 20,
+            height: 1,
+            letterSpacing: 0,
           ),
         ),
       ],
     );
+  }
+}
+
+class _ConsumerMobileBrandHeader extends StatelessWidget {
+  const _ConsumerMobileBrandHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return const _ConsumerWordmark(textSize: 24);
   }
 }
 
@@ -166,52 +166,13 @@ class _ConsumerMobileSearchField extends StatelessWidget {
   }
 }
 
-class _ConsumerMobileFilterRail extends StatelessWidget {
-  const _ConsumerMobileFilterRail();
-
-  @override
-  Widget build(BuildContext context) {
-    const List<String> filters = <String>[
-      'Discover',
-      'My applications',
-      'Completed',
-    ];
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: filters.map((String label) {
-          final bool selected = label == 'Discover';
-          return Padding(
-            padding: const EdgeInsets.only(right: 6),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-              decoration: BoxDecoration(
-                color: selected ? TaraTheme.primaryTint : TaraTheme.surface,
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(
-                  color: selected ? TaraTheme.primary : TaraTheme.border,
-                ),
-              ),
-              child: Text(
-                label,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: selected ? TaraTheme.primaryDark : TaraTheme.textPrimary,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  height: 1,
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-}
-
 class _ConsumerDiscoverBody extends StatelessWidget {
-  const _ConsumerDiscoverBody({required this.onApply});
+  const _ConsumerDiscoverBody({
+    required this.searchController,
+    required this.onApply,
+  });
 
+  final TextEditingController searchController;
   final VoidCallback onApply;
 
   @override
@@ -219,6 +180,8 @@ class _ConsumerDiscoverBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
+        _ConsumerMobileSearchField(controller: searchController),
+        const SizedBox(height: 14),
         _ConsumerMobileSectionTitle('OPEN STUDIES NEAR YOU'),
         const SizedBox(height: 7),
         _OpenStudyMobileCard(
@@ -245,6 +208,76 @@ class _ConsumerDiscoverBody extends StatelessWidget {
         const SizedBox(height: 7),
         const _ConsumerMobileApplications(),
       ],
+    );
+  }
+}
+
+class _ConsumerMobileFilterRail extends StatelessWidget {
+  const _ConsumerMobileFilterRail({
+    required this.currentView,
+    required this.onViewChanged,
+  });
+
+  final _ConsumerView currentView;
+  final ValueChanged<_ConsumerView> onViewChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    const List<_ConsumerFilterItem> filters = <_ConsumerFilterItem>[
+      _ConsumerFilterItem(
+        label: 'Discover',
+        view: _ConsumerView.dashboard,
+      ),
+      _ConsumerFilterItem(
+        label: 'My applications',
+        view: _ConsumerView.roleApplications,
+      ),
+      _ConsumerFilterItem(
+        label: 'Completed',
+        view: _ConsumerView.completedSurveys,
+      ),
+    ];
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: filters.map((_ConsumerFilterItem filter) {
+          final bool selected =
+              currentView == filter.view ||
+              (filter.view == _ConsumerView.dashboard &&
+                  currentView == _ConsumerView.availableSurveys);
+          return Padding(
+            padding: const EdgeInsets.only(right: 6),
+            child: InkWell(
+              onTap: () => onViewChanged(filter.view),
+              borderRadius: BorderRadius.circular(999),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 7,
+                ),
+                decoration: BoxDecoration(
+                  color: selected ? TaraTheme.primaryTint : TaraTheme.surface,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: selected ? TaraTheme.primary : TaraTheme.border,
+                  ),
+                ),
+                child: Text(
+                  filter.label,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: selected
+                        ? TaraTheme.primaryDark
+                        : TaraTheme.textPrimary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    height: 1,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 }
@@ -672,8 +705,8 @@ class _ConsumerMobileNavBar extends StatelessWidget {
               ),
               Expanded(
                 child: _ConsumerMobileNavItem(
-                  icon: Icons.settings_outlined,
-                  label: 'Settings',
+                  icon: Icons.person_outline_rounded,
+                  label: 'Profile',
                   selected: currentView == _ConsumerView.settings,
                   onTap: () => onViewChanged(_ConsumerView.settings),
                 ),
@@ -689,11 +722,15 @@ class _ConsumerMobileNavBar extends StatelessWidget {
 class _ConsumerMobileSettingsCard extends StatelessWidget {
   const _ConsumerMobileSettingsCard({
     required this.userName,
+    required this.email,
+    required this.organization,
     required this.authBusy,
     required this.onLogout,
   });
 
   final String userName;
+  final String email;
+  final String? organization;
   final bool authBusy;
   final VoidCallback? onLogout;
 
@@ -706,7 +743,9 @@ class _ConsumerMobileSettingsCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: TaraTheme.border),
       ),
-      child: Column(
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height - 190,
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Row(
@@ -731,6 +770,22 @@ class _ConsumerMobileSettingsCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
+          _ConsumerMobileSettingsFormGrid(
+            fields: <_ConsumerMobileSettingsField>[
+              _ConsumerMobileSettingsField(label: 'Name', value: userName),
+              _ConsumerMobileSettingsField(label: 'Email', value: email),
+              const _ConsumerMobileSettingsField(
+                label: 'Role',
+                value: 'Consumer',
+              ),
+              if (organization != null && organization!.trim().isNotEmpty)
+                _ConsumerMobileSettingsField(
+                  label: 'Organization',
+                  value: organization!.trim(),
+                ),
+            ],
+          ),
+          const Spacer(),
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
@@ -745,8 +800,60 @@ class _ConsumerMobileSettingsCard extends StatelessWidget {
           ),
         ],
       ),
+      ),
     );
   }
+}
+
+class _ConsumerFilterItem {
+  const _ConsumerFilterItem({required this.label, required this.view});
+
+  final String label;
+  final _ConsumerView view;
+}
+
+class _ConsumerMobileSettingsFormGrid extends StatelessWidget {
+  const _ConsumerMobileSettingsFormGrid({required this.fields});
+
+  final List<_ConsumerMobileSettingsField> fields;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final bool twoColumns = constraints.maxWidth >= 560;
+        final double fieldWidth = twoColumns
+            ? (constraints.maxWidth - 12) / 2
+            : constraints.maxWidth;
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: fields
+              .map(
+                (_ConsumerMobileSettingsField field) => SizedBox(
+                  width: fieldWidth,
+                  child: TextFormField(
+                    initialValue: field.value.isEmpty ? '-' : field.value,
+                    readOnly: true,
+                    decoration: InputDecoration(labelText: field.label),
+                  ),
+                ),
+              )
+              .toList(),
+        );
+      },
+    );
+  }
+}
+
+class _ConsumerMobileSettingsField {
+  const _ConsumerMobileSettingsField({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
 }
 
 class _ConsumerMobileNavItem extends StatelessWidget {

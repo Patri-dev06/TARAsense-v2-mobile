@@ -8,6 +8,7 @@ import 'package:tarasense_mobile/core/theme/tara_theme.dart';
 import 'package:tarasense_mobile/core/widgets/dost_logo_mark.dart';
 import 'package:tarasense_mobile/core/widgets/tara_brand_lockup.dart';
 import 'package:tarasense_mobile/features/auth/state/auth_providers.dart';
+import 'package:tarasense_mobile/features/auth/ui/auth_loading_dialog.dart';
 import 'package:tarasense_mobile/features/msme/data/msme_api.dart';
 import 'package:tarasense_mobile/features/msme/domain/msme_models.dart';
 
@@ -783,8 +784,10 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
                     snackConsumer: _snackConsumer,
                     energyDrinkConsumer: _energyDrinkConsumer,
                     onRefresh: _loadProfile,
-                    onLogout: () =>
-                        ref.read(authControllerProvider.notifier).logout(),
+                    onLogout: () => showLogoutLoadingAndRun(
+                      context,
+                      () => ref.read(authControllerProvider.notifier).logout(),
+                    ),
                     onGenderChanged: (String value) {
                       setState(() => _selectedGender = value);
                     },

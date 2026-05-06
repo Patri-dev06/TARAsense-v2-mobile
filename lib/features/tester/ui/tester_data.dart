@@ -91,21 +91,3 @@ String _consumerInitials(String value) {
   return '${parts.first.substring(0, 1)}${parts.last.substring(0, 1)}'
       .toUpperCase();
 }
-
-String _formatDate(DateTime date) {
-  const List<String> months = <String>[
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
-  return '${months[date.month - 1]} ${date.day}, ${date.year}';
-}

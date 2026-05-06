@@ -45,7 +45,9 @@ class _DashboardPanel extends StatelessWidget {
 }
 
 class _AvailableSurveysPanel extends StatelessWidget {
-  const _AvailableSurveysPanel();
+  const _AvailableSurveysPanel({required this.searchController});
+
+  final TextEditingController searchController;
 
   @override
   Widget build(BuildContext context) {
@@ -54,14 +56,16 @@ class _AvailableSurveysPanel extends StatelessWidget {
       badge: '3',
       trailing: const Icon(Icons.keyboard_arrow_up_rounded),
       child: Column(
-        children: _availableSurveys
-            .map(
-              (survey) => Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: _SurveyCard(survey: survey),
-              ),
-            )
-            .toList(),
+        children: <Widget>[
+          _ConsumerSearchField(controller: searchController),
+          const SizedBox(height: 18),
+          ..._availableSurveys.map(
+            (survey) => Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: _SurveyCard(survey: survey),
+            ),
+          ),
+        ],
       ),
     );
   }

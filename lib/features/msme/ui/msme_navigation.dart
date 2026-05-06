@@ -80,8 +80,8 @@ class _MsmePortalNavBar extends StatelessWidget {
             ),
             Expanded(
               child: _PortalNavItem(
-                icon: Icons.settings_outlined,
-                label: 'Settings',
+                icon: Icons.person_outline_rounded,
+                label: 'Profile',
                 selected: currentTabIndex == 2,
                 onTap: onProfile,
               ),

@@ -74,7 +74,7 @@ class _ConsumerSearchField extends StatelessWidget {
       controller: controller,
       textInputAction: TextInputAction.search,
       decoration: InputDecoration(
-        hintText: 'Search studies and applications',
+        hintText: 'Search studies...',
         prefixIcon: const Icon(Icons.search_rounded),
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         border: OutlineInputBorder(
@@ -636,67 +636,6 @@ class _ConsumerWordmark extends StatelessWidget {
         Text('TARA', style: style.copyWith(color: TaraTheme.dostBlue)),
         Text('sense', style: style.copyWith(color: TaraTheme.primary)),
       ],
-    );
-  }
-}
-
-class _TopChip extends StatelessWidget {
-  const _TopChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: TaraTheme.surface,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: TaraTheme.border),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: const Color(0xFF14243D),
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-    );
-  }
-}
-
-class _DateChip extends StatelessWidget {
-  const _DateChip({required this.date});
-
-  final DateTime date;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: TaraTheme.surface,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: TaraTheme.border),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          const Icon(
-            Icons.calendar_month_outlined,
-            size: 16,
-            color: Color(0xFF64748B),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            _formatDate(date),
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: const Color(0xFF52657D),
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

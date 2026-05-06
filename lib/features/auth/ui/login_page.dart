@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -20,9 +22,18 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   bool _obscurePassword = true;
   bool _rememberMe = true;
+  bool _isSubmittingLogin = false;
+  bool _isNavigatingAfterLogin = false;
+  DateTime? _loginAnimationStartedAt;
+  bool _loginDialogVisible = false;
+
+  static const Duration _minimumLoginAnimationDuration = Duration(
+    milliseconds: 850,
+  );
 
   @override
   void dispose() {
+    _hideLoginOverlay();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -34,6 +45,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
 
     FocusScope.of(context).unfocus();
+    setState(() {
+      _isSubmittingLogin = true;
+      _loginAnimationStartedAt = DateTime.now();
+    });
+    _showLoginOverlay();
+    await WidgetsBinding.instance.endOfFrame;
 
     await ref
         .read(authControllerProvider.notifier)
@@ -41,6 +58,72 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
+
+    if (!mounted ||
+        ref.read(authControllerProvider).status == AuthStatus.authenticated) {
+      return;
+    }
+
+    await _waitForMinimumLoginAnimation();
+    if (mounted) {
+      _hideLoginOverlay();
+      setState(() => _isSubmittingLogin = false);
+    }
+  }
+
+  void _showLoginOverlay() {
+    if (_loginDialogVisible) {
+      return;
+    }
+    _loginDialogVisible = true;
+    unawaited(
+      showGeneralDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        barrierLabel: 'Logging in',
+        barrierColor: Colors.transparent,
+        transitionDuration: const Duration(milliseconds: 120),
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return const _LoginLoadingOverlay(message: 'Logging in...');
+        },
+      ).whenComplete(() => _loginDialogVisible = false),
+    );
+  }
+
+  void _hideLoginOverlay() {
+    if (!_loginDialogVisible || !mounted) {
+      return;
+    }
+    final navigator = Navigator.of(context, rootNavigator: true);
+    if (navigator.canPop()) {
+      navigator.pop();
+    }
+    _loginDialogVisible = false;
+  }
+
+  Future<void> _waitForMinimumLoginAnimation() async {
+    final DateTime startedAt = _loginAnimationStartedAt ?? DateTime.now();
+    final Duration elapsed = DateTime.now().difference(startedAt);
+    final Duration remaining = _minimumLoginAnimationDuration - elapsed;
+    if (remaining > Duration.zero) {
+      await Future<void>.delayed(remaining);
+    }
+  }
+
+  Future<void> _completeSuccessfulLogin(AuthState next) async {
+    if (_isNavigatingAfterLogin) {
+      return;
+    }
+    _isNavigatingAfterLogin = true;
+    await _waitForMinimumLoginAnimation();
+    if (!mounted) {
+      return;
+    }
+    _hideLoginOverlay();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Logged in successfully.')),
+    );
+    context.go(next.session?.user.homePath ?? '/dashboard');
   }
 
   void _showComingSoon(String message) {
@@ -57,10 +140,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     ref.listen<AuthState>(authControllerProvider, (previous, next) {
       if (previous?.status != AuthStatus.authenticated &&
           next.status == AuthStatus.authenticated) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Logged in successfully.')),
-        );
-        context.go(next.session?.user.homePath ?? '/dashboard');
+        unawaited(_completeSuccessfulLogin(next));
       } else if (next.errorMessage != null &&
           previous?.errorMessage != next.errorMessage) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -77,7 +157,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       child: AuthScaffold(
         title: 'Log in to your account',
         subtitle: 'Enter your email and password below to log in.',
-        isLoading: authState.isBusy,
+        isLoading: authState.isBusy || _isSubmittingLogin,
         loadingMessage: 'Logging in...',
         child: Form(
           key: _formKey,
@@ -247,9 +327,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
-                    onPressed: authState.isBusy ? null : _submit,
+                    onPressed: authState.isBusy || _isSubmittingLogin
+                        ? null
+                        : _submit,
                     child: AuthButtonContent(
-                      isLoading: authState.isBusy,
+                      isLoading: authState.isBusy || _isSubmittingLogin,
                       label: 'Log in',
                       loadingLabel: 'Logging in...',
                     ),
@@ -259,7 +341,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
-                    onPressed: authState.isBusy ? null : () => context.go('/register'),
+                    onPressed: authState.isBusy || _isSubmittingLogin
+                        ? null
+                        : () => context.go('/register'),
                     child: const Text('Create account'),
                   ),
                 ),
@@ -274,7 +358,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         style: theme.textTheme.bodyMedium,
                       ),
                       TextButton(
-                        onPressed: authState.isBusy ? null : () => context.go('/register'),
+                        onPressed: authState.isBusy || _isSubmittingLogin
+                            ? null
+                            : () => context.go('/register'),
                         child: const Text('Sign up'),
                       ),
                     ],
@@ -284,10 +370,103 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
-                    onPressed: authState.isBusy ? null : () => context.go('/'),
+                    onPressed: authState.isBusy || _isSubmittingLogin
+                        ? null
+                        : () => context.go('/'),
                     icon: const Icon(Icons.dashboard_outlined),
                     label: const Text('Back to main dashboard'),
                   ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LoginLoadingOverlay extends StatefulWidget {
+  const _LoginLoadingOverlay({required this.message});
+
+  final String message;
+
+  @override
+  State<_LoginLoadingOverlay> createState() => _LoginLoadingOverlayState();
+}
+
+class _LoginLoadingOverlayState extends State<_LoginLoadingOverlay>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+    _scale = Tween<double>(begin: 0.94, end: 1.06).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.expand(
+      child: Material(
+        color: Colors.white.withValues(alpha: 0.92),
+        child: Center(
+          child: Container(
+            width: 280,
+            padding: const EdgeInsets.fromLTRB(24, 26, 24, 24),
+            decoration: BoxDecoration(
+              color: TaraTheme.surface,
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: TaraTheme.border),
+              boxShadow: const <BoxShadow>[
+                BoxShadow(
+                  color: Color(0x180F172A),
+                  blurRadius: 30,
+                  offset: Offset(0, 18),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                ScaleTransition(
+                  scale: _scale,
+                  child: const SizedBox(
+                    height: 64,
+                    width: 64,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 5,
+                      color: TaraTheme.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  widget.message,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: TaraTheme.textPrimary,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Preparing your workspace...',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
             ),

@@ -243,34 +243,52 @@ class _ProfileTab extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             _SectionCard(
-              title: 'Settings',
+              title: 'Profile',
               subtitle: 'Manage account status and workspace access.',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  _MetadataRow(
-                    label: 'Account Role',
-                    value: profile!.metadata.role,
-                  ),
-                  _MetadataRow(
-                    label: 'Joined',
-                    value: profile!.metadata.joinedAt == null
-                        ? '-'
-                        : _formatShortDate(profile!.metadata.joinedAt!),
-                  ),
-                  _MetadataRow(
-                    label: 'Panelist profile created',
-                    value: profile!.metadata.panelistCreatedAt == null
-                        ? '-'
-                        : _formatShortDate(
-                            profile!.metadata.panelistCreatedAt!,
-                          ),
-                  ),
-                  _MetadataRow(
-                    label: 'Last active',
-                    value: profile!.metadata.lastActive == null
-                        ? '-'
-                        : _formatLongDateTime(profile!.metadata.lastActive!),
+                  _ProfileSettingsFormGrid(
+                    fields: <_ProfileSettingsField>[
+                      _ProfileSettingsField(
+                        label: 'Name',
+                        value: profile!.name,
+                      ),
+                      _ProfileSettingsField(
+                        label: 'Email',
+                        value: profile!.email,
+                      ),
+                      _ProfileSettingsField(
+                        label: 'Organization',
+                        value: profile!.organization,
+                      ),
+                      _ProfileSettingsField(
+                        label: 'Account Role',
+                        value: profile!.metadata.role,
+                      ),
+                      _ProfileSettingsField(
+                        label: 'Joined',
+                        value: profile!.metadata.joinedAt == null
+                            ? '-'
+                            : _formatShortDate(profile!.metadata.joinedAt!),
+                      ),
+                      _ProfileSettingsField(
+                        label: 'Panelist profile created',
+                        value: profile!.metadata.panelistCreatedAt == null
+                            ? '-'
+                            : _formatShortDate(
+                                profile!.metadata.panelistCreatedAt!,
+                              ),
+                      ),
+                      _ProfileSettingsField(
+                        label: 'Last active',
+                        value: profile!.metadata.lastActive == null
+                            ? '-'
+                            : _formatLongDateTime(
+                                profile!.metadata.lastActive!,
+                              ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 14),
                   SizedBox(
@@ -293,5 +311,49 @@ class _ProfileTab extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ProfileSettingsFormGrid extends StatelessWidget {
+  const _ProfileSettingsFormGrid({required this.fields});
+
+  final List<_ProfileSettingsField> fields;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final bool twoColumns = constraints.maxWidth >= 620;
+        final double fieldWidth = twoColumns
+            ? (constraints.maxWidth - 12) / 2
+            : constraints.maxWidth;
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: fields
+              .map(
+                (_ProfileSettingsField field) => SizedBox(
+                  width: fieldWidth,
+                  child: TextFormField(
+                    initialValue: field.value.isEmpty ? '-' : field.value,
+                    readOnly: true,
+                    decoration: InputDecoration(labelText: field.label),
+                  ),
+                ),
+              )
+              .toList(),
+        );
+      },
+    );
+  }
+}
+
+class _ProfileSettingsField {
+  const _ProfileSettingsField({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
 }
 
