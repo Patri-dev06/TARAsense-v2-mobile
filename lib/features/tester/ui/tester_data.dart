@@ -76,6 +76,51 @@ const List<_ConsumerSurvey> _availableSurveys = <_ConsumerSurvey>[
   ),
 ];
 
+class _ConsumerApplication {
+  const _ConsumerApplication({
+    required this.title,
+    required this.owner,
+    required this.schedule,
+    required this.status,
+    required this.note,
+  });
+
+  final String title;
+  final String owner;
+  final String schedule;
+  final String status;
+  final String note;
+
+  bool get isConfirmed => status.toUpperCase() == 'CONFIRMED';
+
+  bool get isPending => status.toUpperCase() == 'PENDING';
+}
+
+const List<_ConsumerApplication> _consumerApplications =
+    <_ConsumerApplication>[
+      _ConsumerApplication(
+        title: 'Coconut Vinegar Taste Test',
+        owner: 'Caraga Food Innovation Lab',
+        schedule: 'May 12, 10:00 AM',
+        status: 'Confirmed',
+        note: 'Please arrive 10 minutes before the session.',
+      ),
+      _ConsumerApplication(
+        title: 'Bagoong Flavor Panel',
+        owner: 'InnovBars',
+        schedule: 'Awaiting schedule confirmation',
+        status: 'Pending',
+        note: 'You will receive a follow-up once slots are finalized.',
+      ),
+      _ConsumerApplication(
+        title: 'Dried Mango Texture Evaluation',
+        owner: 'Davao FIC Station',
+        schedule: 'May 18, 2:00 PM',
+        status: 'Accepted',
+        note: 'Session details are ready for final confirmation.',
+      ),
+    ];
+
 String _consumerInitials(String value) {
   final List<String> parts = value
       .trim()

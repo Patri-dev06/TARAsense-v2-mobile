@@ -138,7 +138,7 @@ class _TextBrand extends StatelessWidget {
         Text(
           'TARA',
           style: TextStyle(
-            color: Color(0xFF2452FF),
+            color: TaraTheme.brandNavy,
             fontSize: 20,
             fontWeight: FontWeight.w900,
             height: 1,

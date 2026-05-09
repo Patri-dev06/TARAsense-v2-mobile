@@ -5,6 +5,7 @@ class TaraTheme {
   static const Color dostBlueDark = Color(0xFF003B73);
   static const Color dostYellow = Color(0xFFFFD100);
   static const Color dostRed = Color(0xFFE31B23);
+  static const Color brandNavy = Color(0xFF10254F);
   static const Color primary = Color(0xFFF97316);
   static const Color primaryDark = Color(0xFFEA580C);
   static const Color primarySoft = Color(0xFFFFE2CC);

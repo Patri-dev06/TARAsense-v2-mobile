@@ -549,7 +549,7 @@ class _HeroSection extends StatelessWidget {
           const TaraBrandLockup(
             markSize: 22,
             textSize: 24,
-            taraFillColor: TaraTheme.dostBlue,
+            taraFillColor: TaraTheme.brandNavy,
             senseColor: Colors.white,
           ),
           const SizedBox(height: 18),

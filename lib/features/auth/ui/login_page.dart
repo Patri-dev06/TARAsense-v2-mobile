@@ -155,9 +155,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: AuthScaffold(
-        title: 'Log in to your account',
-        subtitle: 'Enter your email and password below to log in.',
-        isLoading: authState.isBusy || _isSubmittingLogin,
+        title: 'Welcome\nback.',
+        subtitle: 'Sign in to your sensory workspace.',
+        isLoading: false,
         loadingMessage: 'Logging in...',
         child: Form(
           key: _formKey,
@@ -166,53 +166,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: TaraTheme.primaryTint,
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: Row(
-                    children: <Widget>[
-                      Container(
-                        height: 48,
-                        width: 48,
-                        decoration: BoxDecoration(
-                          color: TaraTheme.primary,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Icon(
-                          Icons.lock_outline_rounded,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Text(
-                              'Secure access',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                color: TaraTheme.primaryDark,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Use the same account you use on the latest TARAsense web app.',
-                              style: theme.textTheme.bodySmall,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Text('Email address', style: theme.textTheme.labelLarge),
-                const SizedBox(height: 8),
-                TextFormField(
+                _AuthTextField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
@@ -220,11 +174,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     AutofillHints.username,
                     AutofillHints.email,
                   ],
-                  decoration: const InputDecoration(
-                    hintText: 'email@example.com',
-                    prefixIcon: Icon(Icons.mail_outline_rounded),
-                  ),
-                  onTapOutside: (_) => FocusScope.of(context).unfocus(),
+                  hintText: 'Email address',
+                  prefixIcon: Icons.mail_outline_rounded,
                   validator: (String? value) {
                     final text = (value ?? '').trim();
                     if (text.isEmpty) {
@@ -237,30 +188,25 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   },
                 ),
                 const SizedBox(height: 14),
-                Text('Password', style: theme.textTheme.labelLarge),
-                const SizedBox(height: 8),
-                TextFormField(
+                _AuthTextField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
                   textInputAction: TextInputAction.done,
                   autofillHints: const <String>[AutofillHints.password],
-                  decoration: InputDecoration(
-                    hintText: 'Password',
-                    prefixIcon: const Icon(Icons.lock_outline_rounded),
-                    suffixIcon: IconButton(
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                      ),
+                  hintText: 'Password',
+                  prefixIcon: Icons.lock_outline_rounded,
+                  suffixIcon: IconButton(
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
                     ),
                   ),
-                  onTapOutside: (_) => FocusScope.of(context).unfocus(),
                   onFieldSubmitted: (_) {
                     if (!authState.isBusy) {
                       _submit();
@@ -277,59 +223,77 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 10),
-                InkWell(
-                  onTap: () {
-                    setState(() {
-                      _rememberMe = !_rememberMe;
-                    });
-                  },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      children: <Widget>[
-                        Checkbox(
-                          value: _rememberMe,
-                          onChanged: (bool? value) {
-                            setState(() {
-                              _rememberMe = value ?? false;
-                            });
-                          },
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            'Remember me on this device',
-                            style: theme.textTheme.bodyMedium,
+                const SizedBox(height: 12),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: InkWell(
+                        onTap: () {
+                          setState(() {
+                            _rememberMe = !_rememberMe;
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(14),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            children: <Widget>[
+                              Checkbox(
+                                value: _rememberMe,
+                                visualDensity: VisualDensity.compact,
+                                onChanged: (bool? value) {
+                                  setState(() {
+                                    _rememberMe = value ?? false;
+                                  });
+                                },
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  'Remember me',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: TaraTheme.textPrimary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {
-                      _showComingSoon(
-                        'Forgot password will be added to the mobile flow next.',
-                      );
-                    },
-                    child: const Text('Forgot password?'),
-                  ),
+                    TextButton(
+                      onPressed: () {
+                        _showComingSoon(
+                          'Forgot password will be added to the mobile flow next.',
+                        );
+                      },
+                      style: TextButton.styleFrom(
+                        foregroundColor: TaraTheme.primaryDark,
+                        padding: const EdgeInsets.symmetric(horizontal: 0),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      child: const Text('Forgot password?'),
+                    ),
+                  ],
                 ),
                 if (authState.errorMessage != null) ...<Widget>[
                   const SizedBox(height: 14),
                   AuthErrorMessage(message: authState.errorMessage!),
                 ],
-                const SizedBox(height: 18),
+                const SizedBox(height: 22),
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
                     onPressed: authState.isBusy || _isSubmittingLogin
                         ? null
                         : _submit,
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(58),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                    ),
                     child: AuthButtonContent(
                       isLoading: authState.isBusy || _isSubmittingLogin,
                       label: 'Log in',
@@ -337,14 +301,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 18),
+                const _AuthDivider(label: 'or continue with'),
+                const SizedBox(height: 18),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
                     onPressed: authState.isBusy || _isSubmittingLogin
                         ? null
                         : () => context.go('/register'),
-                    child: const Text('Create account'),
+                    style: _secondaryButtonStyle(),
+                    child: const Text('Create new account'),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -355,13 +322,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     children: <Widget>[
                       Text(
                         'Don\'t have an account? ',
-                        style: theme.textTheme.bodyMedium,
+                        style: theme.textTheme.bodySmall,
                       ),
                       TextButton(
                         onPressed: authState.isBusy || _isSubmittingLogin
                             ? null
                             : () => context.go('/register'),
-                        child: const Text('Sign up'),
+                        child: const Text('Sign up free'),
                       ),
                     ],
                   ),
@@ -373,8 +340,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     onPressed: authState.isBusy || _isSubmittingLogin
                         ? null
                         : () => context.go('/'),
+                    style: _secondaryButtonStyle(
+                      foregroundColor: TaraTheme.textPrimary,
+                    ),
                     icon: const Icon(Icons.dashboard_outlined),
-                    label: const Text('Back to main dashboard'),
+                    label: const Text('Go to main dashboard'),
                   ),
                 ),
               ],
@@ -382,6 +352,100 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           ),
         ),
       ),
+    );
+  }
+}
+
+ButtonStyle _secondaryButtonStyle({Color? foregroundColor}) {
+  return OutlinedButton.styleFrom(
+    backgroundColor: Colors.transparent,
+    foregroundColor: foregroundColor ?? TaraTheme.textPrimary,
+    minimumSize: const Size.fromHeight(56),
+    side: const BorderSide(color: TaraTheme.border),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+    textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+  );
+}
+
+class _AuthTextField extends StatelessWidget {
+  const _AuthTextField({
+    required this.controller,
+    required this.hintText,
+    required this.prefixIcon,
+    required this.validator,
+    this.keyboardType,
+    this.textInputAction,
+    this.autofillHints,
+    this.obscureText = false,
+    this.suffixIcon,
+    this.onFieldSubmitted,
+  });
+
+  final TextEditingController controller;
+  final String hintText;
+  final IconData prefixIcon;
+  final String? Function(String?) validator;
+  final TextInputType? keyboardType;
+  final TextInputAction? textInputAction;
+  final Iterable<String>? autofillHints;
+  final bool obscureText;
+  final Widget? suffixIcon;
+  final ValueChanged<String>? onFieldSubmitted;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      textInputAction: textInputAction,
+      autofillHints: autofillHints,
+      obscureText: obscureText,
+      onTapOutside: (_) => FocusScope.of(context).unfocus(),
+      onFieldSubmitted: onFieldSubmitted,
+      validator: validator,
+      decoration: InputDecoration(
+        hintText: hintText,
+        prefixIcon: Icon(prefixIcon),
+        suffixIcon: suffixIcon,
+        fillColor: const Color(0xFFF6F1EA),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 17,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(color: Color(0xFFE6DDD0)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(color: Color(0xFFE6DDD0)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(color: TaraTheme.primary, width: 1.4),
+        ),
+      ),
+    );
+  }
+}
+
+class _AuthDivider extends StatelessWidget {
+  const _AuthDivider({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final TextStyle? textStyle = Theme.of(context).textTheme.bodySmall;
+    return Row(
+      children: <Widget>[
+        const Expanded(child: Divider(color: TaraTheme.border, height: 1)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(label, style: textStyle),
+        ),
+        const Expanded(child: Divider(color: TaraTheme.border, height: 1)),
+      ],
     );
   }
 }

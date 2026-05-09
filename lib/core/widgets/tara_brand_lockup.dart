@@ -43,7 +43,7 @@ class TaraBrandLockup extends StatelessWidget {
             _OutlinedBrandText(
               text: 'TARA',
               style: brandTextStyle,
-              fillColor: taraFillColor ?? TaraTheme.dostBlue,
+              fillColor: taraFillColor ?? TaraTheme.brandNavy,
               outlineColor: taraOutlineColor,
             ),
             Text('sense', style: brandTextStyle.copyWith(color: textColor)),

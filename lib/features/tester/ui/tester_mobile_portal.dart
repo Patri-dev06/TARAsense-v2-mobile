@@ -48,10 +48,7 @@ class _ConsumerMobilePortal extends StatelessWidget {
               const SizedBox(height: 16),
             ],
             if (showDiscover)
-              _ConsumerDiscoverBody(
-                searchController: searchController,
-                onApply: () => onViewChanged(_ConsumerView.roleApplications),
-              )
+              _ConsumerDiscoverBody(searchController: searchController)
             else if (currentView == _ConsumerView.profile)
               _ConsumerMobileProfileCard(userName: userName)
             else if (currentView == _ConsumerView.completedSurveys)
@@ -167,13 +164,9 @@ class _ConsumerMobileSearchField extends StatelessWidget {
 }
 
 class _ConsumerDiscoverBody extends StatelessWidget {
-  const _ConsumerDiscoverBody({
-    required this.searchController,
-    required this.onApply,
-  });
+  const _ConsumerDiscoverBody({required this.searchController});
 
   final TextEditingController searchController;
-  final VoidCallback onApply;
 
   @override
   Widget build(BuildContext context) {
@@ -182,31 +175,17 @@ class _ConsumerDiscoverBody extends StatelessWidget {
       children: <Widget>[
         _ConsumerMobileSearchField(controller: searchController),
         const SizedBox(height: 14),
-        _ConsumerMobileSectionTitle('OPEN STUDIES NEAR YOU'),
-        const SizedBox(height: 7),
-        _OpenStudyMobileCard(
-          station: 'FIC: NCR Station 2 - In-lab',
-          slots: '30 slots left',
-          title: 'Dried Mango Texture Evaluation',
-          details: '45 min - PHP150 incentive',
-          tags: const <String>['JAR Scale', 'Texture'],
-          dark: false,
-          onApply: onApply,
+        _ConsumerMobileSectionTitle('OPEN STUDIES'),
+        const SizedBox(height: 8),
+        ..._availableSurveys.map(
+          (_ConsumerSurvey survey) => Padding(
+            padding: const EdgeInsets.only(bottom: 0),
+            child: _ConsumerStudyListTile(
+              survey: survey,
+              compact: true,
+            ),
+          ),
         ),
-        const SizedBox(height: 10),
-        _OpenStudyMobileCard(
-          station: 'FIC: Davao Station - In-lab',
-          slots: '12 slots left',
-          title: 'Cacao Dark Chocolate Study',
-          details: '60 min - PHP200 incentive',
-          tags: const <String>['Bitterness', 'Aroma'],
-          dark: true,
-          onApply: onApply,
-        ),
-        const SizedBox(height: 14),
-        _ConsumerMobileSectionTitle('MY APPLICATIONS'),
-        const SizedBox(height: 7),
-        const _ConsumerMobileApplications(),
       ],
     );
   }
@@ -282,161 +261,134 @@ class _ConsumerMobileFilterRail extends StatelessWidget {
   }
 }
 
-class _OpenStudyMobileCard extends StatelessWidget {
-  const _OpenStudyMobileCard({
-    required this.station,
-    required this.slots,
-    required this.title,
-    required this.details,
-    required this.tags,
-    required this.dark,
-    required this.onApply,
-  });
-
-  final String station;
-  final String slots;
-  final String title;
-  final String details;
-  final List<String> tags;
-  final bool dark;
-  final VoidCallback onApply;
-
-  @override
-  Widget build(BuildContext context) {
-    final Color bandColor = dark ? const Color(0xFF111111) : TaraTheme.primary;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: TaraTheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: TaraTheme.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-            decoration: BoxDecoration(
-              color: bandColor,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: Text(
-                    station,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    slots,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 8,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontSize: 13,
-              height: 1.15,
-              letterSpacing: 0,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            details,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: TaraTheme.textPrimary,
-              fontSize: 10,
-              height: 1,
-            ),
-          ),
-          const SizedBox(height: 9),
-          Wrap(
-            spacing: 5,
-            runSpacing: 5,
-            children: tags
-                .map((String tag) => _ConsumerMiniTag(label: tag))
-                .toList(),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            height: 34,
-            child: FilledButton(
-              onPressed: onApply,
-              style: FilledButton.styleFrom(
-                backgroundColor: TaraTheme.primary,
-                foregroundColor: Colors.white,
-                minimumSize: const Size(0, 34),
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(7),
-                ),
-                textStyle: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              child: const Text('Apply now'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _ConsumerMobileApplications extends StatelessWidget {
   const _ConsumerMobileApplications();
 
   @override
   Widget build(BuildContext context) {
+    final int confirmedCount = _consumerApplications
+        .where((_ConsumerApplication item) => item.isConfirmed)
+        .length;
+    final int pendingCount = _consumerApplications
+        .where((_ConsumerApplication item) => item.isPending)
+        .length;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
       decoration: BoxDecoration(
         color: TaraTheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: TaraTheme.border),
+        border: Border.all(color: const Color(0xFFE7E0D7)),
       ),
-      child: const Column(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          _ApplicationRow(
-            icon: Icons.check_box_outline_blank_rounded,
-            title: 'Coconut Vinegar Taste',
-            subtitle: 'May 12 - 10:00 AM',
-            status: 'Confirmed',
-            confirmed: true,
+          Row(
+            children: <Widget>[
+              Text(
+                'Active applications',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: const Color(0xFF111827),
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0,
+                ),
+              ),
+              const Spacer(),
+              _ApplicationCountPill(
+                value: _consumerApplications.length.toString(),
+              ),
+            ],
           ),
-          Divider(height: 18),
-          _ApplicationRow(
-            icon: Icons.schedule_rounded,
-            title: 'Bagoong Flavor Panel',
-            subtitle: 'Awaiting confirmation',
-            status: 'Pending',
-            confirmed: false,
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              _ApplicationSummaryChip(
+                label: 'Confirmed',
+                value: confirmedCount.toString(),
+                tint: const Color(0xFFEAF8D9),
+                textColor: TaraTheme.mintText,
+              ),
+              _ApplicationSummaryChip(
+                label: 'Pending',
+                value: pendingCount.toString(),
+                tint: TaraTheme.primaryTint,
+                textColor: TaraTheme.primaryDark,
+              ),
+              _ApplicationSummaryChip(
+                label: 'Reviewing',
+                value:
+                    (_consumerApplications.length - confirmedCount - pendingCount)
+                        .toString(),
+                tint: const Color(0xFFF4F4F5),
+                textColor: TaraTheme.textSecondary,
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ..._consumerApplications.asMap().entries.map((entry) {
+            final bool isLast = entry.key == _consumerApplications.length - 1;
+            return Column(
+              children: <Widget>[
+                _ApplicationListItem(application: entry.value),
+                if (!isLast)
+                  const Divider(
+                    height: 18,
+                    thickness: 1,
+                    color: Color(0xFFF0E8DF),
+                  ),
+              ],
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
+class _ApplicationSummaryChip extends StatelessWidget {
+  const _ApplicationSummaryChip({
+    required this.label,
+    required this.value,
+    required this.tint,
+    required this.textColor,
+  });
+
+  final String label;
+  final String value;
+  final Color tint;
+  final Color textColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: tint,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text(
+            value,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: textColor,
+              fontWeight: FontWeight.w900,
+              fontSize: 11,
+              height: 1,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: textColor,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              height: 1,
+            ),
           ),
         ],
       ),
@@ -444,71 +396,105 @@ class _ConsumerMobileApplications extends StatelessWidget {
   }
 }
 
-class _ApplicationRow extends StatelessWidget {
-  const _ApplicationRow({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.status,
-    required this.confirmed,
-  });
+class _ApplicationCountPill extends StatelessWidget {
+  const _ApplicationCountPill({required this.value});
 
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final String status;
-  final bool confirmed;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        Container(
-          height: 28,
-          width: 28,
-          decoration: BoxDecoration(
-            color: confirmed ? TaraTheme.primaryTint : const Color(0xFFF3F4F6),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            icon,
-            color: confirmed ? TaraTheme.primaryDark : TaraTheme.textSecondary,
-            size: 14,
-          ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: TaraTheme.primaryTint,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        value,
+        style: const TextStyle(
+          color: TaraTheme.primaryDark,
+          fontSize: 11,
+          fontWeight: FontWeight.w900,
+          height: 1,
         ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontSize: 11,
-                  height: 1.1,
-                  letterSpacing: 0,
+      ),
+    );
+  }
+}
+
+class _ApplicationListItem extends StatelessWidget {
+  const _ApplicationListItem({required this.application});
+
+  final _ConsumerApplication application;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool confirmed = application.isConfirmed;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Container(
+            height: 32,
+            width: 32,
+            decoration: BoxDecoration(
+              color: confirmed ? const Color(0xFFEAF8D9) : TaraTheme.primaryTint,
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(
+              confirmed ? Icons.check_rounded : Icons.schedule_rounded,
+              color: confirmed ? TaraTheme.mintText : TaraTheme.primaryDark,
+              size: 16,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  application.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: const Color(0xFF111827),
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: TaraTheme.textPrimary.withValues(alpha: 0.72),
-                  fontSize: 9,
-                  height: 1,
+                const SizedBox(height: 3),
+                Text(
+                  '${application.owner}  •  ${application.schedule}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: const Color(0xFF6B7280),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 5),
+                Text(
+                  application.note,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: const Color(0xFF667085),
+                    fontSize: 10,
+                    height: 1.2,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(width: 8),
-        _ConsumerStatusPill(
-          label: status,
-          confirmed: confirmed,
-        ),
-      ],
+          const SizedBox(width: 8),
+          _ConsumerStatusPill(
+            label: application.status,
+            confirmed: confirmed,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -525,40 +511,17 @@ class _ConsumerStatusPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
         color: confirmed ? const Color(0xFFEAF8D9) : TaraTheme.primaryTint,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: confirmed ? const Color(0xFFD9F0BE) : const Color(0xFFFFD8B5),
+        ),
       ),
       child: Text(
         label,
         style: TextStyle(
           color: confirmed ? TaraTheme.mintText : TaraTheme.primaryDark,
-          fontSize: 9,
+          fontSize: 10,
           fontWeight: FontWeight.w900,
-          height: 1,
-        ),
-      ),
-    );
-  }
-}
-
-class _ConsumerMiniTag extends StatelessWidget {
-  const _ConsumerMiniTag({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF0F0F0),
-        borderRadius: BorderRadius.circular(5),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: TaraTheme.textPrimary,
-          fontSize: 9,
-          fontWeight: FontWeight.w800,
           height: 1,
         ),
       ),

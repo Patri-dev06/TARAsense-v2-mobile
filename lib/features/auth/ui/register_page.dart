@@ -92,9 +92,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: AuthScaffold(
-        title: 'Create an account',
-        subtitle:
-            'Use your name, email, password, and account type to get started.',
+        title: 'Create your\naccount.',
+        subtitle: 'Set up your TARAsense access in a few quick steps.',
         isLoading: authState.isBusy,
         loadingMessage: 'Creating account...',
         isSuccess: _registrationSucceeded,
@@ -106,42 +105,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: TaraTheme.primaryTint,
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        'Latest web app flow',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: TaraTheme.primaryDark,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Create your account once, then continue project setup and sensory work across web and mobile.',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Text('Full name', style: theme.textTheme.labelLarge),
-                const SizedBox(height: 8),
-                TextFormField(
+                _AuthTextField(
                   controller: _nameController,
                   textInputAction: TextInputAction.next,
                   autofillHints: const <String>[AutofillHints.name],
-                  decoration: const InputDecoration(
-                    hintText: 'Juan Dela Cruz',
-                    prefixIcon: Icon(Icons.person_outline_rounded),
-                  ),
-                  onTapOutside: (_) => FocusScope.of(context).unfocus(),
+                  hintText: 'Full name',
+                  prefixIcon: Icons.person_outline_rounded,
                   validator: (String? value) {
                     if ((value ?? '').trim().length < 2) {
                       return 'Name must be at least 2 characters';
@@ -150,7 +119,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   },
                 ),
                 const SizedBox(height: 14),
-                Text('Account type', style: theme.textTheme.labelLarge),
+                Text('Account type', style: theme.textTheme.labelMedium),
                 const SizedBox(height: 8),
                 _AccountTypeSelector(
                   selectedRole: _selectedRole,
@@ -159,9 +128,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   },
                 ),
                 const SizedBox(height: 14),
-                Text('Email address', style: theme.textTheme.labelLarge),
-                const SizedBox(height: 8),
-                TextFormField(
+                _AuthTextField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
@@ -169,11 +136,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     AutofillHints.username,
                     AutofillHints.email,
                   ],
-                  decoration: const InputDecoration(
-                    hintText: 'email@example.com',
-                    prefixIcon: Icon(Icons.mail_outline_rounded),
-                  ),
-                  onTapOutside: (_) => FocusScope.of(context).unfocus(),
+                  hintText: 'Email address',
+                  prefixIcon: Icons.mail_outline_rounded,
                   validator: (String? value) {
                     final text = (value ?? '').trim();
                     if (text.isEmpty) {
@@ -186,30 +150,25 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   },
                 ),
                 const SizedBox(height: 14),
-                Text('Password', style: theme.textTheme.labelLarge),
-                const SizedBox(height: 8),
-                TextFormField(
+                _AuthTextField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
                   textInputAction: TextInputAction.done,
                   autofillHints: const <String>[AutofillHints.newPassword],
-                  decoration: InputDecoration(
-                    hintText: 'At least 6 characters',
-                    prefixIcon: const Icon(Icons.lock_outline_rounded),
-                    suffixIcon: IconButton(
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                      ),
+                  hintText: 'Password',
+                  prefixIcon: Icons.lock_outline_rounded,
+                  suffixIcon: IconButton(
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
                     ),
                   ),
-                  onTapOutside: (_) => FocusScope.of(context).unfocus(),
                   onFieldSubmitted: (_) {
                     if (!authState.isBusy) {
                       _submit();
@@ -231,44 +190,32 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: TaraTheme.border),
+                    color: const Color(0xFFF8F2EA),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFFE9DDCE)),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        'Before you continue',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      const _ChecklistItem(
-                        text:
-                            'Use your real name for a cleaner workspace profile.',
-                      ),
-                      const _ChecklistItem(
-                        text:
-                            'Choose Consumer if you are applying for available studies.',
-                      ),
-                      const _ChecklistItem(
-                        text:
-                            'Your mobile and web account credentials stay the same.',
-                      ),
-                    ],
+                  child: Text(
+                    'Use your real details so your profile, workspace access, and study applications stay in sync across mobile and web.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: TaraTheme.textPrimary,
+                    ),
                   ),
                 ),
                 if (authState.errorMessage != null) ...<Widget>[
                   const SizedBox(height: 14),
                   AuthErrorMessage(message: authState.errorMessage!),
                 ],
-                const SizedBox(height: 18),
+                const SizedBox(height: 22),
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
                     onPressed: authState.isBusy ? null : _submit,
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(58),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                    ),
                     child: AuthButtonContent(
                       isLoading: authState.isBusy,
                       label: 'Create account',
@@ -276,11 +223,14 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 18),
+                const _AuthDivider(label: 'or continue with'),
+                const SizedBox(height: 18),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
                     onPressed: authState.isBusy ? null : () => context.go('/login'),
+                    style: _secondaryButtonStyle(),
                     child: const Text('Back to log in'),
                   ),
                 ),
@@ -306,8 +256,11 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: authState.isBusy ? null : () => context.go('/'),
+                    style: _secondaryButtonStyle(
+                      foregroundColor: TaraTheme.textPrimary,
+                    ),
                     icon: const Icon(Icons.dashboard_outlined),
-                    label: const Text('Back to main dashboard'),
+                    label: const Text('Go to main dashboard'),
                   ),
                 ),
               ],
@@ -315,6 +268,100 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           ),
         ),
       ),
+    );
+  }
+}
+
+ButtonStyle _secondaryButtonStyle({Color? foregroundColor}) {
+  return OutlinedButton.styleFrom(
+    backgroundColor: Colors.transparent,
+    foregroundColor: foregroundColor ?? TaraTheme.textPrimary,
+    minimumSize: const Size.fromHeight(56),
+    side: const BorderSide(color: TaraTheme.border),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+    textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+  );
+}
+
+class _AuthTextField extends StatelessWidget {
+  const _AuthTextField({
+    required this.controller,
+    required this.hintText,
+    required this.prefixIcon,
+    required this.validator,
+    this.keyboardType,
+    this.textInputAction,
+    this.autofillHints,
+    this.obscureText = false,
+    this.suffixIcon,
+    this.onFieldSubmitted,
+  });
+
+  final TextEditingController controller;
+  final String hintText;
+  final IconData prefixIcon;
+  final String? Function(String?) validator;
+  final TextInputType? keyboardType;
+  final TextInputAction? textInputAction;
+  final Iterable<String>? autofillHints;
+  final bool obscureText;
+  final Widget? suffixIcon;
+  final ValueChanged<String>? onFieldSubmitted;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      textInputAction: textInputAction,
+      autofillHints: autofillHints,
+      obscureText: obscureText,
+      onTapOutside: (_) => FocusScope.of(context).unfocus(),
+      onFieldSubmitted: onFieldSubmitted,
+      validator: validator,
+      decoration: InputDecoration(
+        hintText: hintText,
+        prefixIcon: Icon(prefixIcon),
+        suffixIcon: suffixIcon,
+        fillColor: const Color(0xFFF6F1EA),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 17,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(color: Color(0xFFE6DDD0)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(color: Color(0xFFE6DDD0)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(color: TaraTheme.primary, width: 1.4),
+        ),
+      ),
+    );
+  }
+}
+
+class _AuthDivider extends StatelessWidget {
+  const _AuthDivider({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final TextStyle? textStyle = Theme.of(context).textTheme.bodySmall;
+    return Row(
+      children: <Widget>[
+        const Expanded(child: Divider(color: TaraTheme.border, height: 1)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(label, style: textStyle),
+        ),
+        const Expanded(child: Divider(color: TaraTheme.border, height: 1)),
+      ],
     );
   }
 }
@@ -418,40 +465,4 @@ class _AccountTypeOption {
   final String value;
   final String label;
   final IconData icon;
-}
-
-class _ChecklistItem extends StatelessWidget {
-  const _ChecklistItem({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Container(
-            margin: const EdgeInsets.only(top: 4),
-            height: 8,
-            width: 8,
-            decoration: BoxDecoration(
-              color: TaraTheme.primary,
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              text,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: TaraTheme.textPrimary),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

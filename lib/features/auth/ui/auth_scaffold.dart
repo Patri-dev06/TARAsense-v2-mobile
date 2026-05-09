@@ -30,58 +30,55 @@ class AuthScaffold extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: <Color>[Color(0xFFF7FAFD), TaraTheme.backgroundAlt],
+            colors: <Color>[Color(0xFFFFFCF9), Color(0xFFF7F2EC)],
           ),
         ),
         child: Stack(
           children: <Widget>[
             const _BackgroundGlow(
               alignment: Alignment.topLeft,
-              size: 280,
-              color: Color(0x33F97316),
+              size: 220,
+              color: Color(0x14F97316),
             ),
             const _BackgroundGlow(
               alignment: Alignment.bottomRight,
-              size: 340,
-              color: Color(0x14FDBA74),
+              size: 280,
+              color: Color(0x120057A8),
             ),
             SafeArea(
               child: LayoutBuilder(
                 builder: (BuildContext context, BoxConstraints constraints) {
-                  if (constraints.maxWidth >= 980) {
-                    return Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(36, 36, 18, 36),
-                            child: const _BrandStoryPanel(),
-                          ),
-                        ),
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(18, 36, 36, 36),
-                            child: _FormPanel(
-                              title: title,
-                              subtitle: subtitle,
-                              child: child,
-                            ),
-                          ),
-                        ),
-                      ],
+                  final bool isWide = constraints.maxWidth >= 980;
+                  final EdgeInsets padding = EdgeInsets.symmetric(
+                    horizontal: isWide ? 32 : 18,
+                    vertical: isWide ? 28 : 16,
+                  );
+
+                  final Widget formCard = Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 440),
+                      child: _FormPanel(
+                        title: title,
+                        subtitle: subtitle,
+                        child: child,
+                      ),
+                    ),
+                  );
+
+                  if (!isWide) {
+                    return SingleChildScrollView(
+                      padding: padding,
+                      child: formCard,
                     );
                   }
 
-                  return SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-                    child: Column(
+                  return Padding(
+                    padding: padding,
+                    child: Row(
                       children: <Widget>[
-                        const _CompactBrandHeader(),
-                        const SizedBox(height: 14),
-                        _FormPanel(
-                          title: title,
-                          subtitle: subtitle,
-                          child: child,
-                        ),
+                        const Expanded(child: _BrandPanel()),
+                        const SizedBox(width: 28),
+                        Expanded(child: formCard),
                       ],
                     ),
                   );
@@ -110,7 +107,7 @@ class AuthErrorMessage extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
       decoration: BoxDecoration(
         color: const Color(0xFFFFF1F2),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0xFFFECDD3)),
       ),
       child: Row(
@@ -127,7 +124,7 @@ class AuthErrorMessage extends StatelessWidget {
               message,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: TaraTheme.roseText,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -142,34 +139,204 @@ class AuthButtonContent extends StatelessWidget {
     required this.isLoading,
     required this.label,
     this.loadingLabel,
+    this.icon = Icons.arrow_forward_rounded,
     super.key,
   });
 
   final bool isLoading;
   final String label;
   final String? loadingLabel;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
-    if (!isLoading) {
-      return Text(label);
+    if (isLoading) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          const SizedBox(
+            height: 16,
+            width: 16,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.2,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(loadingLabel ?? label),
+        ],
+      );
     }
 
     return Row(
       mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
       children: <Widget>[
-        const SizedBox(
-          height: 16,
-          width: 16,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Text(loadingLabel ?? label),
+        Text(label),
+        const SizedBox(width: 8),
+        Icon(icon, size: 18),
       ],
+    );
+  }
+}
+
+class _BrandPanel extends StatelessWidget {
+  const _BrandPanel();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 500),
+      padding: const EdgeInsets.fromLTRB(40, 42, 40, 42),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(40),
+        border: Border.all(color: Colors.white),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x100F172A),
+            blurRadius: 40,
+            offset: Offset(0, 24),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const TaraBrandLockup(
+            markSize: 28,
+            textSize: 28,
+            taraFillColor: TaraTheme.brandNavy,
+            senseColor: TaraTheme.textPrimary,
+          ),
+          const Spacer(),
+          Text(
+            'Sensory workspace access built for teams, stations, and study participants.',
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+              height: 1.08,
+              color: TaraTheme.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Sign in, register, or jump to the main dashboard preview from one calm, responsive entry point.',
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: TaraTheme.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 26),
+          const Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: <Widget>[
+              _InfoPill(label: 'Projects'),
+              _InfoPill(label: 'Studies'),
+              _InfoPill(label: 'FIC Queue'),
+              _InfoPill(label: 'Consumer Access'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FormPanel extends StatelessWidget {
+  const _FormPanel({
+    required this.title,
+    required this.subtitle,
+    required this.child,
+  });
+
+  final String title;
+  final String subtitle;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final List<String> titleLines = title.split('\n');
+    final String primaryLine = titleLines.first;
+    final String accentLine = titleLines.length > 1
+        ? titleLines.skip(1).join('\n')
+        : '';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFDFBF8),
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(color: const Color(0xFFF1E7DA)),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x120F172A),
+            blurRadius: 32,
+            offset: Offset(0, 18),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const TaraBrandLockup(
+            markSize: 18,
+            textSize: 18,
+            taraFillColor: TaraTheme.brandNavy,
+            senseColor: TaraTheme.textPrimary,
+          ),
+          const SizedBox(height: 26),
+          Text(
+            primaryLine,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+              height: 1.04,
+            ),
+          ),
+          if (accentLine.isNotEmpty) ...<Widget>[
+            Text(
+              accentLine,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: TaraTheme.primary,
+                fontWeight: FontWeight.w900,
+                height: 1.04,
+              ),
+            ),
+          ],
+          const SizedBox(height: 10),
+          Text(
+            subtitle,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: TaraTheme.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 24),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoPill extends StatelessWidget {
+  const _InfoPill({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: TaraTheme.primaryTint,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xFFF5D6BA)),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: TaraTheme.primaryDark,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
     );
   }
 }
@@ -217,7 +384,7 @@ class _AuthLoadingScreenState extends State<_AuthLoadingScreen>
         children: <Widget>[
           ModalBarrier(
             dismissible: false,
-            color: Colors.white.withValues(alpha: 0.9),
+            color: Colors.white.withValues(alpha: 0.92),
           ),
           Center(
             child: Container(
@@ -385,278 +552,6 @@ class _AuthSuccessScreen extends StatelessWidget {
                   ),
                 ],
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CompactBrandHeader extends StatelessWidget {
-  const _CompactBrandHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: <Color>[Color(0xFFF97316), Color(0xFFFF9A45)],
-        ),
-        borderRadius: BorderRadius.circular(32),
-        boxShadow: const <BoxShadow>[
-          BoxShadow(
-            color: Color(0x24F97316),
-            blurRadius: 32,
-            offset: Offset(0, 18),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: const <Widget>[
-          TaraBrandLockup(
-            markSize: 26,
-            textSize: 26,
-            taraFillColor: TaraTheme.dostBlue,
-            senseColor: Colors.white,
-          ),
-          SizedBox(height: 18),
-          Text(
-            'Sensory research, project setup, and support coordination in one mobile workspace.',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 15,
-              height: 1.5,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          SizedBox(height: 18),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: <Widget>[
-              _InfoPill(label: 'Projects'),
-              _InfoPill(label: 'Tests'),
-              _InfoPill(label: 'FIC Support'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BrandStoryPanel extends StatelessWidget {
-  const _BrandStoryPanel();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: <Color>[Color(0xFFF97316), Color(0xFFFFA24D)],
-        ),
-        borderRadius: BorderRadius.circular(38),
-        boxShadow: const <BoxShadow>[
-          BoxShadow(
-            color: Color(0x24F97316),
-            blurRadius: 36,
-            offset: Offset(0, 20),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.fromLTRB(34, 34, 34, 30),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          const TaraBrandLockup(
-            markSize: 30,
-            textSize: 30,
-            taraFillColor: TaraTheme.dostBlue,
-            senseColor: Colors.white,
-          ),
-          const Spacer(),
-          Text(
-            'Build projects, configure tests, and keep your sensory workflow moving.',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              color: Colors.white,
-              height: 1.05,
-            ),
-          ),
-          const SizedBox(height: 14),
-          const Text(
-            'The refreshed mobile experience follows the latest TARAsense web content while keeping a focused, touch-first layout.',
-            style: TextStyle(color: Colors.white, fontSize: 16, height: 1.6),
-          ),
-          const SizedBox(height: 28),
-          const Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: <Widget>[
-              _FeatureChip(
-                icon: Icons.inventory_2_outlined,
-                title: 'Create Projects',
-                subtitle: 'Start and organize work',
-              ),
-              _FeatureChip(
-                icon: Icons.tune_rounded,
-                title: 'Configure Tests',
-                subtitle: 'Set categories and stages',
-              ),
-              _FeatureChip(
-                icon: Icons.handshake_outlined,
-                title: 'Request Support',
-                subtitle: 'Coordinate with FIC teams',
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FormPanel extends StatelessWidget {
-  const _FormPanel({
-    required this.title,
-    required this.subtitle,
-    required this.child,
-  });
-
-  final String title;
-  final String subtitle;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: TaraTheme.surface,
-        borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: TaraTheme.border),
-        boxShadow: const <BoxShadow>[
-          BoxShadow(
-            color: Color(0x140F172A),
-            blurRadius: 30,
-            offset: Offset(0, 16),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            const Text(
-              'Account Access',
-              style: TextStyle(
-                color: TaraTheme.primaryDark,
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 1.1,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(title, style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: TaraTheme.textSecondary),
-            ),
-            const SizedBox(height: 18),
-            child,
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _InfoPill extends StatelessWidget {
-  const _InfoPill({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.18),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
-class _FeatureChip extends StatelessWidget {
-  const _FeatureChip({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 190,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Container(
-            height: 46,
-            width: 46,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(icon, color: Colors.white, size: 24),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            subtitle,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 13,
-              height: 1.45,
             ),
           ),
         ],

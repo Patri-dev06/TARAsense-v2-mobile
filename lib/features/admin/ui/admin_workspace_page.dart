@@ -4,8 +4,17 @@ import 'package:tarasense_mobile/core/theme/tara_theme.dart';
 import 'package:tarasense_mobile/core/widgets/tara_brand_lockup.dart';
 import 'package:tarasense_mobile/features/auth/state/auth_providers.dart';
 import 'package:tarasense_mobile/features/auth/ui/auth_loading_dialog.dart';
+import 'package:tarasense_mobile/features/fic/ui/fic_workspace_page.dart';
+import 'package:tarasense_mobile/features/msme/ui/msme_workspace_page.dart';
 
-enum _AdminView { dashboard, users, studies, logs, settings }
+enum _AdminView {
+  dashboard,
+  users,
+  profile,
+  roleRequests,
+  msmePreview,
+  ficPreview,
+}
 
 class AdminWorkspacePage extends ConsumerStatefulWidget {
   const AdminWorkspacePage({super.key});
@@ -16,100 +25,127 @@ class AdminWorkspacePage extends ConsumerStatefulWidget {
 
 class _AdminWorkspacePageState extends ConsumerState<AdminWorkspacePage> {
   _AdminView _currentView = _AdminView.dashboard;
+  final TextEditingController _globalSearchController = TextEditingController();
   final TextEditingController _userSearchController = TextEditingController();
-  final List<_RoleRequestDraft> _roleRequests = <_RoleRequestDraft>[
-    _RoleRequestDraft(
-      initials: 'JR',
-      name: 'Juan Reyes',
-      detail: 'Consumer -> MSME upgrade',
-    ),
-    _RoleRequestDraft(
-      initials: 'MC',
-      name: 'Maria Cruz',
-      detail: 'New FIC assignment',
-    ),
-  ];
 
   @override
   void dispose() {
+    _globalSearchController.dispose();
     _userSearchController.dispose();
     super.dispose();
-  }
-  final List<_AuditEntry> _auditLog = <_AuditEntry>[
-    const _AuditEntry(
-      icon: Icons.person_outline_rounded,
-      title: 'User role updated',
-      detail: 'admin@dost.gov - 2 min ago',
-      tint: TaraTheme.primaryTint,
-      iconColor: TaraTheme.primaryDark,
-    ),
-    const _AuditEntry(
-      icon: Icons.fact_check_outlined,
-      title: 'New study approved',
-      detail: 'msme@example.ph - 15 min ago',
-      tint: Color(0xFFEAF8D9),
-      iconColor: TaraTheme.mintText,
-    ),
-    const _AuditEntry(
-      icon: Icons.schedule_rounded,
-      title: 'FIC availability updated',
-      detail: 'fic.station3 - 1 hr ago',
-      tint: Color(0xFFF3F4F6),
-      iconColor: TaraTheme.textSecondary,
-    ),
-  ];
-
-  void _resolveRequest(int index, bool approved) {
-    final _RoleRequestDraft request = _roleRequests[index];
-    setState(() {
-      _roleRequests.removeAt(index);
-      _auditLog.insert(
-        0,
-        _AuditEntry(
-          icon: approved
-              ? Icons.check_circle_outline_rounded
-              : Icons.cancel_outlined,
-          title: approved ? 'Role request approved' : 'Role request denied',
-          detail: '${request.name} - just now',
-          tint: approved ? const Color(0xFFEAF8D9) : TaraTheme.primaryTint,
-          iconColor: approved ? TaraTheme.mintText : TaraTheme.primaryDark,
-        ),
-      );
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '${request.name} ${approved ? 'approved' : 'denied'}.',
-        ),
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
     final session = authState.session;
-    final bool wide = MediaQuery.sizeOf(context).width >= 720;
+    final double width = MediaQuery.sizeOf(context).width;
+    final bool wideLayout = width >= 980;
+
+    if (wideLayout) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF6F8FB),
+        body: SafeArea(
+          child: Row(
+            children: <Widget>[
+              _AdminSidebar(
+                currentView: _currentView,
+                roleRequestCount: _roleRequests.length,
+                onChanged: (view) => setState(() => _currentView = view),
+                authBusy: authState.isBusy,
+                onLogout: _handleLogout,
+              ),
+              Expanded(
+                child: Column(
+                  children: <Widget>[
+                    _AdminTopBar(
+                      controller: _globalSearchController,
+                      dateLabel: _adminDateLabel(DateTime.now()),
+                    ),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(28, 22, 28, 24),
+                        child: _AdminMainContent(
+                          currentView: _currentView,
+                          name: session?.user.name ?? 'Administrator',
+                          email: session?.user.email ?? '',
+                          role: session?.user.role ?? 'Admin',
+                          organization: session?.user.organization,
+                          userSearchController: _userSearchController,
+                          roleRequestCount: _roleRequests.length,
+                          authBusy: authState.isBusy,
+                          onLogout: _handleLogout,
+                          onGoToUsers: () =>
+                              setState(() => _currentView = _AdminView.users),
+                          onGoToRoleRequests: () => setState(
+                            () => _currentView = _AdminView.roleRequests,
+                          ),
+                          onOpenMsmeWorkspace: _openMsmeWorkspace,
+                          onOpenFicWorkspace: _openFicWorkspace,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
-      backgroundColor: TaraTheme.surface,
+      backgroundColor: const Color(0xFFF6F8FB),
+      appBar: AppBar(
+        toolbarHeight: 72,
+        titleSpacing: 16,
+        title: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            TaraBrandLockup(markSize: 18, textSize: 20),
+            SizedBox(height: 2),
+            Text(
+              'ADMINISTRATION',
+              style: TextStyle(
+                color: Color(0xFF64748B),
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                height: 1,
+              ),
+            ),
+          ],
+        ),
+      ),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () =>
               ref.read(authControllerProvider.notifier).refreshProfile(),
           child: ListView(
-            padding: EdgeInsets.fromLTRB(wide ? 28 : 16, 14, wide ? 28 : 16, 22),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
             children: <Widget>[
-              _AdminHeader(
-                name: session?.user.name ?? 'Admin',
+              const SizedBox(height: 8),
+              _AdminTopBar(
+                controller: _globalSearchController,
+                dateLabel: _adminDateLabel(DateTime.now()),
+                compact: true,
               ),
               const SizedBox(height: 18),
-              _buildView(
+              _AdminMainContent(
+                currentView: _currentView,
+                name: session?.user.name ?? 'Administrator',
+                email: session?.user.email ?? '',
+                role: session?.user.role ?? 'Admin',
+                organization: session?.user.organization,
+                userSearchController: _userSearchController,
+                roleRequestCount: _roleRequests.length,
                 authBusy: authState.isBusy,
-                onLogout: () => showLogoutLoadingAndRun(
-                  context,
-                  () => ref.read(authControllerProvider.notifier).logout(),
-                ),
+                onLogout: _handleLogout,
+                onGoToUsers: () =>
+                    setState(() => _currentView = _AdminView.users),
+                onGoToRoleRequests: () =>
+                    setState(() => _currentView = _AdminView.roleRequests),
+                onOpenMsmeWorkspace: _openMsmeWorkspace,
+                onOpenFicWorkspace: _openFicWorkspace,
               ),
             ],
           ),
@@ -122,76 +158,563 @@ class _AdminWorkspacePageState extends ConsumerState<AdminWorkspacePage> {
     );
   }
 
-  Widget _buildView({
-    required bool authBusy,
-    required VoidCallback onLogout,
-  }) {
-    switch (_currentView) {
+  void _handleLogout() {
+    showLogoutLoadingAndRun(
+      context,
+      () => ref.read(authControllerProvider.notifier).logout(),
+    );
+  }
+
+  void _openMsmeWorkspace() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const MsmeWorkspacePage()),
+    );
+  }
+
+  void _openFicWorkspace() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const FicWorkspacePage()),
+    );
+  }
+}
+
+class _AdminSidebar extends StatelessWidget {
+  const _AdminSidebar({
+    required this.currentView,
+    required this.roleRequestCount,
+    required this.onChanged,
+    required this.authBusy,
+    required this.onLogout,
+  });
+
+  final _AdminView currentView;
+  final int roleRequestCount;
+  final ValueChanged<_AdminView> onChanged;
+  final bool authBusy;
+  final VoidCallback onLogout;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 224,
+      decoration: const BoxDecoration(
+        color: TaraTheme.surface,
+        border: Border(right: BorderSide(color: Color(0xFFE7EDF5))),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 20, 18, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const <Widget>[
+                TaraBrandLockup(markSize: 20, textSize: 18),
+                SizedBox(height: 8),
+                Text(
+                  'ADMINISTRATION',
+                  style: TextStyle(
+                    color: Color(0xFF475569),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    height: 1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: Color(0xFFE9EEF5)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
+            child: Text(
+              'NAVIGATION',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: const Color(0xFF94A3B8),
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          _AdminSidebarItem(
+            icon: Icons.grid_view_outlined,
+            label: 'Dashboard',
+            selected: currentView == _AdminView.dashboard,
+            onTap: () => onChanged(_AdminView.dashboard),
+          ),
+          _AdminSidebarItem(
+            icon: Icons.group_outlined,
+            label: 'Users',
+            selected: currentView == _AdminView.users,
+            onTap: () => onChanged(_AdminView.users),
+          ),
+          _AdminSidebarItem(
+            icon: Icons.person_outline_rounded,
+            label: 'Profile',
+            selected: currentView == _AdminView.profile,
+            onTap: () => onChanged(_AdminView.profile),
+          ),
+          _AdminSidebarItem(
+            icon: Icons.verified_user_outlined,
+            label: 'Role Requests',
+            badge: roleRequestCount.toString(),
+            selected: currentView == _AdminView.roleRequests,
+            onTap: () => onChanged(_AdminView.roleRequests),
+          ),
+          _AdminSidebarItem(
+            icon: Icons.storefront_outlined,
+            label: 'MSME View',
+            selected: currentView == _AdminView.msmePreview,
+            onTap: () => onChanged(_AdminView.msmePreview),
+          ),
+          _AdminSidebarItem(
+            icon: Icons.science_outlined,
+            label: 'FIC View',
+            selected: currentView == _AdminView.ficPreview,
+            onTap: () => onChanged(_AdminView.ficPreview),
+          ),
+          const Spacer(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+            child: SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: authBusy ? null : onLogout,
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, 42),
+                  backgroundColor: const Color(0xFFF8FAFC),
+                  side: const BorderSide(color: Color(0xFFE7EDF5)),
+                  foregroundColor: TaraTheme.textPrimary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Logout'),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdminTopBar extends StatelessWidget {
+  const _AdminTopBar({
+    required this.controller,
+    required this.dateLabel,
+    this.compact = false,
+  });
+
+  final TextEditingController controller;
+  final String dateLabel;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget searchField = Expanded(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: TextField(
+          controller: controller,
+          textInputAction: TextInputAction.search,
+          decoration: InputDecoration(
+            hintText: 'Search users, requests, or studies',
+            prefixIcon: const Icon(Icons.search_rounded, size: 18),
+            fillColor: TaraTheme.surface,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 13,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: Color(0xFFE3EAF3)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: Color(0xFFE3EAF3)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: TaraTheme.primary),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final Widget actions = Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: <Widget>[
+        _AdminTopPill(
+          label: 'Admin control center',
+          icon: Icons.shield_outlined,
+        ),
+        _AdminIconButton(icon: Icons.notifications_none_rounded),
+        _AdminTopPill(
+          label: dateLabel,
+          icon: Icons.calendar_today_outlined,
+        ),
+      ],
+    );
+
+    if (compact) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              const _AdminIconButton(icon: Icons.space_dashboard_outlined),
+              const SizedBox(width: 10),
+              searchField,
+            ],
+          ),
+          const SizedBox(height: 10),
+          actions,
+        ],
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 10),
+      decoration: const BoxDecoration(
+        color: Color(0xFFF6F8FB),
+        border: Border(bottom: BorderSide(color: Color(0xFFE7EDF5))),
+      ),
+      child: Row(
+        children: <Widget>[
+          const _AdminIconButton(icon: Icons.space_dashboard_outlined),
+          const SizedBox(width: 10),
+          searchField,
+          const SizedBox(width: 16),
+          actions,
+        ],
+      ),
+    );
+  }
+}
+
+class _AdminMainContent extends StatelessWidget {
+  const _AdminMainContent({
+    required this.currentView,
+    required this.name,
+    required this.email,
+    required this.role,
+    required this.organization,
+    required this.userSearchController,
+    required this.roleRequestCount,
+    required this.authBusy,
+    required this.onLogout,
+    required this.onGoToUsers,
+    required this.onGoToRoleRequests,
+    required this.onOpenMsmeWorkspace,
+    required this.onOpenFicWorkspace,
+  });
+
+  final _AdminView currentView;
+  final String name;
+  final String email;
+  final String role;
+  final String? organization;
+  final TextEditingController userSearchController;
+  final int roleRequestCount;
+  final bool authBusy;
+  final VoidCallback onLogout;
+  final VoidCallback onGoToUsers;
+  final VoidCallback onGoToRoleRequests;
+  final VoidCallback onOpenMsmeWorkspace;
+  final VoidCallback onOpenFicWorkspace;
+
+  @override
+  Widget build(BuildContext context) {
+    switch (currentView) {
       case _AdminView.dashboard:
-        return _AdminDashboardBody(
-          roleRequests: _roleRequests,
-          auditLog: _auditLog,
-          onResolveRequest: _resolveRequest,
+        return _AdminDashboardView(
+          roleRequestCount: roleRequestCount,
+          onGoToUsers: onGoToUsers,
+          onGoToRoleRequests: onGoToRoleRequests,
+          onOpenMsmeWorkspace: onOpenMsmeWorkspace,
+          onOpenFicWorkspace: onOpenFicWorkspace,
         );
       case _AdminView.users:
-        return _AdminUsersPanel(searchController: _userSearchController);
-      case _AdminView.studies:
-        return const _AdminStudiesPanel();
-      case _AdminView.logs:
-        return _AuditLogPanel(auditLog: _auditLog, modern: true);
-      case _AdminView.settings:
-        return _AdminSettingsPanel(
-          name: ref.watch(authControllerProvider).session?.user.name ?? 'Admin',
-          email: ref.watch(authControllerProvider).session?.user.email ?? '',
-          role: ref.watch(authControllerProvider).session?.user.role ?? 'Admin',
-          organization:
-              ref.watch(authControllerProvider).session?.user.organization,
+        return _AdminUsersPanel(searchController: userSearchController);
+      case _AdminView.profile:
+        return _AdminProfilePanel(
+          name: name,
+          email: email,
+          role: role,
+          organization: organization,
           authBusy: authBusy,
           onLogout: onLogout,
+        );
+      case _AdminView.roleRequests:
+        return _AdminRoleRequestsView(roleRequestCount: roleRequestCount);
+      case _AdminView.msmePreview:
+        return _AdminWorkspaceLaunchView(
+          eyebrow: 'MSME VIEW',
+          title: 'Open MSME Access',
+          subtitle:
+              'Study creation, booking status, and survey response progress.',
+          icon: Icons.storefront_outlined,
+          onOpen: onOpenMsmeWorkspace,
+          buttonLabel: 'Open MSME Workspace',
+        );
+      case _AdminView.ficPreview:
+        return _AdminWorkspaceLaunchView(
+          eyebrow: 'FIC VIEW',
+          title: 'Open FIC Access',
+          subtitle:
+              'Facility queue, uploaded studies, and in-lab coordination updates.',
+          icon: Icons.science_outlined,
+          onOpen: onOpenFicWorkspace,
+          buttonLabel: 'Open FIC Workspace',
         );
     }
   }
 }
 
-class _AdminHeader extends StatelessWidget {
-  const _AdminHeader({required this.name});
+class _AdminDashboardView extends StatelessWidget {
+  const _AdminDashboardView({
+    required this.roleRequestCount,
+    required this.onGoToUsers,
+    required this.onGoToRoleRequests,
+    required this.onOpenMsmeWorkspace,
+    required this.onOpenFicWorkspace,
+  });
 
-  final String name;
+  final int roleRequestCount;
+  final VoidCallback onGoToUsers;
+  final VoidCallback onGoToRoleRequests;
+  final VoidCallback onOpenMsmeWorkspace;
+  final VoidCallback onOpenFicWorkspace;
+
+  static const List<_AdminMetric> _metrics = <_AdminMetric>[
+    _AdminMetric(
+      icon: Icons.grid_view_outlined,
+      value: '15',
+      label: 'TOTAL STUDIES',
+      note: 'All studies in the platform',
+      tint: Color(0xFFEAF2FF),
+      iconColor: Color(0xFF1D4ED8),
+    ),
+    _AdminMetric(
+      icon: Icons.group_outlined,
+      value: '116',
+      label: 'REGISTERED USERS',
+      note: 'All active user accounts',
+      tint: Color(0xFFE7FAF3),
+      iconColor: Color(0xFF059669),
+    ),
+    _AdminMetric(
+      icon: Icons.shield_outlined,
+      value: '0',
+      label: 'PENDING REQUESTS',
+      note: 'Awaiting review decisions',
+      tint: Color(0xFFFFF4E8),
+      iconColor: TaraTheme.primaryDark,
+    ),
+    _AdminMetric(
+      icon: Icons.check_circle_outline_rounded,
+      value: '21',
+      label: 'APPROVED REQUESTS',
+      note: 'Successfully upgraded access',
+      tint: Color(0xFFE7FAF3),
+      iconColor: Color(0xFF059669),
+    ),
+    _AdminMetric(
+      icon: Icons.cancel_outlined,
+      value: '0',
+      label: 'REJECTED REQUESTS',
+      note: 'Declined role upgrades',
+      tint: Color(0xFFFFEEF1),
+      iconColor: Color(0xFFE11D48),
+    ),
+    _AdminMetric(
+      icon: Icons.person_outline_rounded,
+      value: '592',
+      label: 'PANELIST PROFILES',
+      note: 'Profiles used for recruitment',
+      tint: Color(0xFFF4F7FB),
+      iconColor: Color(0xFF334155),
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              const TaraBrandLockup(markSize: 18, textSize: 20),
-              const SizedBox(height: 3),
-              Text(
-                'Admin panel',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: TaraTheme.textSecondary,
-                  fontSize: 12,
-                  height: 1,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
+        const Text(
+          'ADMINISTRATION',
+          style: TextStyle(
+            color: Color(0xFF64748B),
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
           ),
         ),
-        const SizedBox(width: 12),
-        CircleAvatar(
-          radius: 18,
-          backgroundColor: TaraTheme.primaryTint,
-          child: Text(
-            _adminInitials(name),
-            style: const TextStyle(
-              color: TaraTheme.primaryDark,
-              fontSize: 11,
-              fontWeight: FontWeight.w900,
-            ),
+        const SizedBox(height: 6),
+        Text(
+          'Admin Dashboard',
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            color: const Color(0xFF0F2854),
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Full access to platform activity, role approvals, and cross-workspace monitoring.',
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            color: const Color(0xFF64748B),
+          ),
+        ),
+        const SizedBox(height: 14),
+        _AdminMetricGrid(metrics: _metrics),
+        const SizedBox(height: 14),
+        _AdminCompactNotice(
+          title: 'System Messages',
+          message: roleRequestCount == 0
+              ? 'No urgent admin notifications right now.'
+              : '$roleRequestCount role requests need attention.',
+        ),
+        const SizedBox(height: 14),
+        _AdminQuickActionsRow(
+          roleRequestCount: roleRequestCount,
+          onGoToUsers: onGoToUsers,
+          onGoToRoleRequests: onGoToRoleRequests,
+          onOpenMsmeWorkspace: onOpenMsmeWorkspace,
+          onOpenFicWorkspace: onOpenFicWorkspace,
+        ),
+      ],
+    );
+  }
+}
+
+class _AdminUsersPanel extends StatelessWidget {
+  const _AdminUsersPanel({required this.searchController});
+
+  final TextEditingController searchController;
+
+  static const List<_AdminUserRecord> _users = <_AdminUserRecord>[
+    _AdminUserRecord(
+      initials: 'AS',
+      name: 'Ana Santos',
+      email: 'ana.santos@example.ph',
+      role: 'Consumer',
+      status: 'Active',
+      note: 'Panelist profile linked',
+    ),
+    _AdminUserRecord(
+      initials: 'JR',
+      name: 'Juan Reyes',
+      email: 'juan.reyes@example.ph',
+      role: 'MSME',
+      status: 'Active',
+      note: 'Study owner access',
+    ),
+    _AdminUserRecord(
+      initials: 'MC',
+      name: 'Maria Cruz',
+      email: 'maria.cruz@example.ph',
+      role: 'Consumer',
+      status: 'Pending',
+      note: 'Awaiting verification',
+    ),
+    _AdminUserRecord(
+      initials: 'F3',
+      name: 'FIC Station 3',
+      email: 'fic.station3@dost.gov',
+      role: 'FIC',
+      status: 'Active',
+      note: 'Davao del Sur',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final String query = searchController.text.trim().toLowerCase();
+    final List<_AdminUserRecord> visibleUsers = _users.where((user) {
+      if (query.isEmpty) {
+        return true;
+      }
+      return user.name.toLowerCase().contains(query) ||
+          user.email.toLowerCase().contains(query) ||
+          user.role.toLowerCase().contains(query);
+    }).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const Text(
+          'ADMINISTRATION',
+          style: TextStyle(
+            color: Color(0xFF64748B),
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Users',
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            color: const Color(0xFF0F2854),
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Review registered users, roles, and account activity status.',
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            color: const Color(0xFF64748B),
+          ),
+        ),
+        const SizedBox(height: 20),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: TaraTheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFD7E0EC)),
+          ),
+          child: Column(
+            children: <Widget>[
+              TextField(
+                controller: searchController,
+                onChanged: (_) => (context as Element).markNeedsBuild(),
+                decoration: InputDecoration(
+                  hintText: 'Search users',
+                  prefixIcon: const Icon(Icons.search_rounded, size: 18),
+                  fillColor: const Color(0xFFF8FAFC),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 14,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFFD7E0EC)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFFD7E0EC)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              ...visibleUsers.asMap().entries.map((entry) {
+                final bool last = entry.key == visibleUsers.length - 1;
+                return Column(
+                  children: <Widget>[
+                    _AdminUserRow(user: entry.value),
+                    if (!last)
+                      const Divider(
+                        height: 18,
+                        color: Color(0xFFE8EEF6),
+                      ),
+                  ],
+                );
+              }),
+            ],
           ),
         ),
       ],
@@ -199,8 +722,8 @@ class _AdminHeader extends StatelessWidget {
   }
 }
 
-class _AdminSettingsPanel extends StatelessWidget {
-  const _AdminSettingsPanel({
+class _AdminProfilePanel extends StatelessWidget {
+  const _AdminProfilePanel({
     required this.name,
     required this.email,
     required this.role,
@@ -218,49 +741,226 @@ class _AdminSettingsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: MediaQuery.sizeOf(context).height - 160,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const Text(
+          'ADMINISTRATION',
+          style: TextStyle(
+            color: Color(0xFF64748B),
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Profile',
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            color: const Color(0xFF0F2854),
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Your current administrator details and account information.',
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            color: const Color(0xFF64748B),
+          ),
+        ),
+        const SizedBox(height: 20),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: TaraTheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFD7E0EC)),
+          ),
+          child: _AdminProfileGrid(
+            fields: <_AdminProfileField>[
+              _AdminProfileField(label: 'Name', value: name),
+              _AdminProfileField(label: 'Email', value: email),
+              _AdminProfileField(label: 'Role', value: role),
+              if (organization != null && organization!.trim().isNotEmpty)
+                _AdminProfileField(
+                  label: 'Organization',
+                  value: organization!.trim(),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: authBusy ? null : onLogout,
+            icon: const Icon(Icons.logout_rounded),
+            label: const Text('Logout'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(0, 48),
+              foregroundColor: TaraTheme.roseText,
+              side: const BorderSide(color: Color(0xFFFBCDD4)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AdminRoleRequestsView extends StatelessWidget {
+  const _AdminRoleRequestsView({required this.roleRequestCount});
+
+  final int roleRequestCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const Text(
+          'ADMINISTRATION',
+          style: TextStyle(
+            color: Color(0xFF64748B),
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Role Requests',
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            color: const Color(0xFF0F2854),
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Review consumer requests for upgraded access and platform roles.',
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            color: const Color(0xFF64748B),
+          ),
+        ),
+        const SizedBox(height: 20),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: TaraTheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFD7E0EC)),
+          ),
+          child: roleRequestCount == 0
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      'No pending role requests',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF111827),
+                        letterSpacing: 0,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'All current access requests have already been resolved.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: const Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                )
+              : const SizedBox.shrink(),
+        ),
+      ],
+    );
+  }
+}
+
+class _AdminWorkspaceLaunchView extends StatelessWidget {
+  const _AdminWorkspaceLaunchView({
+    required this.eyebrow,
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.onOpen,
+    required this.buttonLabel,
+  });
+
+  final String eyebrow;
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final VoidCallback onOpen;
+  final String buttonLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: TaraTheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFD7E0EC)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const _AdminSectionTitle('PROFILE'),
-          const SizedBox(height: 8),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: TaraTheme.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: TaraTheme.border),
-            ),
-            child: Column(
-              children: <Widget>[
-                _AdminSettingsFormGrid(
-                  fields: <_AdminSettingsField>[
-                    _AdminSettingsField(label: 'Name', value: name),
-                    _AdminSettingsField(label: 'Email', value: email),
-                    _AdminSettingsField(label: 'Role', value: role),
-                    if (organization != null &&
-                        organization!.trim().isNotEmpty)
-                      _AdminSettingsField(
-                        label: 'Organization',
-                        value: organization!.trim(),
-                      ),
-                  ],
-                ),
-              ],
+          Text(
+            eyebrow,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: const Color(0xFF64748B),
+              fontWeight: FontWeight.w800,
             ),
           ),
-          const Spacer(),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: authBusy ? null : onLogout,
-              icon: const Icon(Icons.logout_rounded, size: 16),
-              label: const Text('Log out'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: TaraTheme.roseText,
-                side: const BorderSide(color: Color(0xFFFECDD3)),
+          const SizedBox(height: 10),
+          Row(
+            children: <Widget>[
+              Container(
+                height: 44,
+                width: 44,
+                decoration: BoxDecoration(
+                  color: TaraTheme.primaryTint,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: TaraTheme.primaryDark),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: const Color(0xFF111827),
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            subtitle,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: const Color(0xFF64748B),
+            ),
+          ),
+          const SizedBox(height: 18),
+          FilledButton.icon(
+            onPressed: onOpen,
+            icon: const Icon(Icons.open_in_new_rounded),
+            label: Text(buttonLabel),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(0, 48),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
               ),
             ),
           ),
@@ -270,30 +970,472 @@ class _AdminSettingsPanel extends StatelessWidget {
   }
 }
 
-class _AdminSettingsFormGrid extends StatelessWidget {
-  const _AdminSettingsFormGrid({required this.fields});
+class _AdminMetricGrid extends StatelessWidget {
+  const _AdminMetricGrid({required this.metrics});
 
-  final List<_AdminSettingsField> fields;
+  final List<_AdminMetric> metrics;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        final bool twoColumns = constraints.maxWidth >= 520;
-        final double fieldWidth = twoColumns
-            ? (constraints.maxWidth - 10) / 2
-            : constraints.maxWidth;
+        final int columns = constraints.maxWidth >= 1260
+            ? 4
+            : constraints.maxWidth >= 860
+            ? 3
+            : constraints.maxWidth >= 560
+            ? 2
+            : 1;
+        final double width = columns == 1
+            ? constraints.maxWidth
+            : (constraints.maxWidth - (12 * (columns - 1))) / columns;
+
         return Wrap(
           spacing: 10,
           runSpacing: 10,
+          children: metrics
+              .map(
+                (_AdminMetric metric) => SizedBox(
+                  width: width,
+                  child: _AdminMetricCard(metric: metric),
+                ),
+              )
+              .toList(),
+        );
+      },
+    );
+  }
+}
+
+class _AdminMetricCard extends StatelessWidget {
+  const _AdminMetricCard({required this.metric});
+
+  final _AdminMetric metric;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 15, 16, 13),
+      decoration: BoxDecoration(
+        color: TaraTheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE7EDF5)),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x050F172A),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Container(
+            height: 38,
+            width: 38,
+            decoration: BoxDecoration(
+              color: metric.tint,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(metric.icon, color: metric.iconColor, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  metric.value,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: const Color(0xFF0F172A),
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                  ),
+                ),
+                Text(
+                  metric.label,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: const Color(0xFF5C6E91),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  metric.note,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: const Color(0xFF64748B),
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdminCompactNotice extends StatelessWidget {
+  const _AdminCompactNotice({
+    required this.title,
+    required this.message,
+  });
+
+  final String title;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      decoration: BoxDecoration(
+        color: TaraTheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE7EDF5)),
+      ),
+      child: Row(
+        children: <Widget>[
+          Container(
+            height: 30,
+            width: 30,
+            decoration: BoxDecoration(
+              color: TaraTheme.primaryTint,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.notifications_none_rounded,
+              size: 16,
+              color: TaraTheme.primaryDark,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: const Color(0xFF111827),
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  message,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: const Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdminQuickActionsRow extends StatelessWidget {
+  const _AdminQuickActionsRow({
+    required this.roleRequestCount,
+    required this.onGoToUsers,
+    required this.onGoToRoleRequests,
+    required this.onOpenMsmeWorkspace,
+    required this.onOpenFicWorkspace,
+  });
+
+  final int roleRequestCount;
+  final VoidCallback onGoToUsers;
+  final VoidCallback onGoToRoleRequests;
+  final VoidCallback onOpenMsmeWorkspace;
+  final VoidCallback onOpenFicWorkspace;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final int columns = constraints.maxWidth >= 1120
+            ? 4
+            : constraints.maxWidth >= 700
+            ? 2
+            : 1;
+        final double width = columns == 1
+            ? constraints.maxWidth
+            : (constraints.maxWidth - (10 * (columns - 1))) / columns;
+
+        return Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: <Widget>[
+            SizedBox(
+              width: width,
+              child: _AdminActionTile(
+                title: 'Users',
+                subtitle: 'Registered accounts',
+                badge: '116',
+                onTap: onGoToUsers,
+              ),
+            ),
+            SizedBox(
+              width: width,
+              child: _AdminActionTile(
+                title: 'Role Requests',
+                subtitle: 'Pending approvals',
+                badge: roleRequestCount.toString(),
+                onTap: onGoToRoleRequests,
+              ),
+            ),
+            SizedBox(
+              width: width,
+              child: _AdminActionTile(
+                title: 'MSME Access',
+                subtitle: 'Study and response view',
+                onTap: onOpenMsmeWorkspace,
+              ),
+            ),
+            SizedBox(
+              width: width,
+              child: _AdminActionTile(
+                title: 'FIC Access',
+                subtitle: 'Facility operations view',
+                onTap: onOpenFicWorkspace,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _AdminActionTile extends StatelessWidget {
+  const _AdminActionTile({
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    this.badge,
+  });
+
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final String? badge;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: TaraTheme.surface,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Ink(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFBFCFE),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFE7EDF5)),
+          ),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: const Color(0xFF111827),
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: const Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (badge != null) ...<Widget>[
+                const SizedBox(width: 10),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: TaraTheme.primaryTint,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    badge!,
+                    style: const TextStyle(
+                      color: TaraTheme.primaryDark,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      height: 1,
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(width: 10),
+              const Icon(
+                Icons.arrow_forward_rounded,
+                size: 18,
+                color: Color(0xFF94A3B8),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AdminUserRow extends StatelessWidget {
+  const _AdminUserRow({required this.user});
+
+  final _AdminUserRecord user;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final bool stack = constraints.maxWidth < 720;
+        final Widget identity = Row(
+          children: <Widget>[
+            Container(
+              height: 36,
+              width: 36,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: TaraTheme.primaryTint,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                user.initials,
+                style: const TextStyle(
+                  color: TaraTheme.primaryDark,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    user.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: const Color(0xFF111827),
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    user.email,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+
+        final Widget right = Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: <Widget>[
+            _AdminTag(label: user.role),
+            _AdminTag(
+              label: user.status,
+              background: user.status == 'Active'
+                  ? const Color(0xFFE7FAF3)
+                  : TaraTheme.primaryTint,
+              foreground: user.status == 'Active'
+                  ? const Color(0xFF059669)
+                  : TaraTheme.primaryDark,
+            ),
+            Text(
+              user.note,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: const Color(0xFF64748B),
+              ),
+            ),
+          ],
+        );
+
+        if (stack) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              identity,
+              const SizedBox(height: 8),
+              right,
+            ],
+          );
+        }
+
+        return Row(
+          children: <Widget>[
+            Expanded(child: identity),
+            const SizedBox(width: 16),
+            Flexible(child: right),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _AdminProfileGrid extends StatelessWidget {
+  const _AdminProfileGrid({required this.fields});
+
+  final List<_AdminProfileField> fields;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final bool twoColumns = constraints.maxWidth >= 620;
+        final double width = twoColumns
+            ? (constraints.maxWidth - 14) / 2
+            : constraints.maxWidth;
+
+        return Wrap(
+          spacing: 14,
+          runSpacing: 14,
           children: fields
               .map(
-                (_AdminSettingsField field) => SizedBox(
-                  width: fieldWidth,
+                (_AdminProfileField field) => SizedBox(
+                  width: width,
                   child: TextFormField(
                     initialValue: field.value.isEmpty ? '-' : field.value,
                     readOnly: true,
-                    decoration: InputDecoration(labelText: field.label),
+                    decoration: InputDecoration(
+                      labelText: field.label,
+                      fillColor: const Color(0xFFF8FAFC),
+                    ),
                   ),
                 ),
               )
@@ -304,947 +1446,146 @@ class _AdminSettingsFormGrid extends StatelessWidget {
   }
 }
 
-class _AdminSettingsField {
-  const _AdminSettingsField({
+class _AdminSidebarItem extends StatelessWidget {
+  const _AdminSidebarItem({
+    required this.icon,
     required this.label,
-    required this.value,
+    required this.selected,
+    required this.onTap,
+    this.badge,
   });
 
+  final IconData icon;
   final String label;
-  final String value;
-}
-
-class _AdminDashboardBody extends StatelessWidget {
-  const _AdminDashboardBody({
-    required this.roleRequests,
-    required this.auditLog,
-    required this.onResolveRequest,
-  });
-
-  final List<_RoleRequestDraft> roleRequests;
-  final List<_AuditEntry> auditLog;
-  final void Function(int index, bool approved) onResolveRequest;
+  final bool selected;
+  final VoidCallback onTap;
+  final String? badge;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        const _AdminSectionTitle('PLATFORM OVERVIEW'),
-        const SizedBox(height: 8),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final bool roomy = constraints.maxWidth >= 680;
-            return GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: roomy ? 4 : 2,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              childAspectRatio: roomy ? 1.65 : 1.48,
-              children: const <Widget>[
-                _OverviewMetricCard(
-                  label: 'Total users',
-                  value: '284',
-                  note: '+12 this week',
-                  positive: true,
+    final Color foreground = selected
+        ? TaraTheme.primaryDark
+        : const Color(0xFF223B68);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: selected ? const Color(0xFFFFF8F2) : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: selected
+                  ? const Color(0xFFFFE3CB)
+                  : Colors.transparent,
+            ),
+          ),
+          child: Row(
+            children: <Widget>[
+              Container(
+                height: 28,
+                width: 28,
+                decoration: BoxDecoration(
+                  color: selected ? TaraTheme.primaryTint : const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                _OverviewMetricCard(
-                  label: 'Active studies',
-                  value: '17',
-                  note: '3 pending',
-                  positive: false,
+                child: Icon(icon, size: 16, color: foreground),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: foreground,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-                _OverviewMetricCard(
-                  label: 'FIC facilities',
-                  value: '8',
-                  note: '2 unassigned',
+              ),
+              if (badge != null)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: TaraTheme.primary,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    badge!,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                 ),
-                _OverviewMetricCard(
-                  label: 'Role requests',
-                  value: '5',
-                  note: 'Needs review',
-                  positive: false,
-                ),
-              ],
-            );
-          },
+            ],
+          ),
         ),
-        const SizedBox(height: 16),
-        const _AdminSectionTitle('PENDING ROLE REQUESTS'),
-        const SizedBox(height: 8),
-        _RoleRequestsPanel(
-          requests: roleRequests,
-          onResolveRequest: onResolveRequest,
-        ),
-        const SizedBox(height: 16),
-        const _AdminSectionTitle('RECENT AUDIT LOG'),
-        const SizedBox(height: 8),
-        _AuditLogPanel(auditLog: auditLog.take(3).toList()),
-      ],
+      ),
     );
   }
 }
 
-class _OverviewMetricCard extends StatelessWidget {
-  const _OverviewMetricCard({
-    required this.label,
-    required this.value,
-    required this.note,
-    this.positive,
-  });
+class _AdminTopPill extends StatelessWidget {
+  const _AdminTopPill({required this.label, required this.icon});
 
   final String label;
-  final String value;
-  final String note;
-  final bool? positive;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
-    final Color noteColor = positive == null
-        ? TaraTheme.textPrimary
-        : positive!
-        ? TaraTheme.mintText
-        : TaraTheme.primaryDark;
     return Container(
-      padding: const EdgeInsets.fromLTRB(10, 10, 10, 9),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF2F2F2),
-        borderRadius: BorderRadius.circular(8),
+        color: TaraTheme.surface,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xFFE7EDF5)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: <Widget>[
+          Icon(icon, size: 14, color: const Color(0xFF64748B)),
+          const SizedBox(width: 6),
           Text(
             label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: TaraTheme.textPrimary.withValues(alpha: 0.72),
-              fontSize: 10,
+              color: const Color(0xFF334155),
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 5),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontSize: 20,
-              height: 1,
-              letterSpacing: 0,
-            ),
-          ),
-          const Spacer(),
-          Text(
-            note,
-            style: TextStyle(
-              color: noteColor,
-              fontSize: 9,
-              fontWeight: FontWeight.w900,
-              height: 1,
-            ),
-          ),
         ],
       ),
     );
   }
 }
 
-class _RoleRequestsPanel extends StatelessWidget {
-  const _RoleRequestsPanel({
-    required this.requests,
-    required this.onResolveRequest,
-  });
+class _AdminIconButton extends StatelessWidget {
+  const _AdminIconButton({required this.icon});
 
-  final List<_RoleRequestDraft> requests;
-  final void Function(int index, bool approved) onResolveRequest;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      height: 38,
+      width: 38,
       decoration: BoxDecoration(
         color: TaraTheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: TaraTheme.border),
+        border: Border.all(color: const Color(0xFFE7EDF5)),
       ),
-      child: requests.isEmpty
-          ? const _AdminSimpleRow(
-              title: 'All caught up',
-              detail: 'No role requests need review.',
-            )
-          : Column(
-              children: requests.asMap().entries.map((entry) {
-                return Padding(
-                  padding: EdgeInsets.only(
-                    bottom: entry.key == requests.length - 1 ? 0 : 8,
-                  ),
-                  child: _RoleRequestRow(
-                    request: entry.value,
-                    onApprove: () => onResolveRequest(entry.key, true),
-                    onDeny: () => onResolveRequest(entry.key, false),
-                  ),
-                );
-              }).toList(),
-            ),
+      child: Icon(icon, size: 18, color: const Color(0xFF64748B)),
     );
   }
 }
 
-class _RoleRequestRow extends StatelessWidget {
-  const _RoleRequestRow({
-    required this.request,
-    required this.onApprove,
-    required this.onDeny,
-  });
-
-  final _RoleRequestDraft request;
-  final VoidCallback onApprove;
-  final VoidCallback onDeny;
-
-  @override
-  Widget build(BuildContext context) {
-    final Widget identity = Row(
-      children: <Widget>[
-        CircleAvatar(
-          radius: 17,
-          backgroundColor: const Color(0xFFF3F4F6),
-          child: Text(
-            request.initials,
-            style: const TextStyle(
-              color: TaraTheme.textPrimary,
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-        const SizedBox(width: 9),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                request.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontSize: 11,
-                  height: 1.1,
-                  letterSpacing: 0,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                request.detail,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: TaraTheme.textPrimary.withValues(alpha: 0.76),
-                  fontSize: 9,
-                  height: 1.08,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-    final Widget actions = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        _AdminActionButton(label: 'Approve', primary: true, onTap: onApprove),
-        const SizedBox(width: 6),
-        _AdminActionButton(label: 'Deny', primary: false, onTap: onDeny),
-      ],
-    );
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < 330) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              identity,
-              const SizedBox(height: 8),
-              Align(alignment: Alignment.centerRight, child: actions),
-            ],
-          );
-        }
-
-        return Row(
-          children: <Widget>[
-            Expanded(child: identity),
-            const SizedBox(width: 10),
-            actions,
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _AdminActionButton extends StatelessWidget {
-  const _AdminActionButton({
+class _AdminTag extends StatelessWidget {
+  const _AdminTag({
     required this.label,
-    required this.primary,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool primary;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: primary ? TaraTheme.primary : const Color(0xFFF3F4F6),
-      borderRadius: BorderRadius.circular(6),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(6),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: primary ? Colors.white : TaraTheme.textPrimary,
-              fontSize: 9,
-              fontWeight: FontWeight.w900,
-              height: 1,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AuditLogPanel extends StatelessWidget {
-  const _AuditLogPanel({required this.auditLog, this.modern = false});
-
-  final List<_AuditEntry> auditLog;
-  final bool modern;
-
-  @override
-  Widget build(BuildContext context) {
-    if (modern) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          const _AdminSectionTitle('ACTIVITY LOGS'),
-          const SizedBox(height: 8),
-          _ModernAuditLogPanel(auditLog: auditLog),
-        ],
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-      decoration: BoxDecoration(
-        color: TaraTheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: TaraTheme.border),
-      ),
-      child: Column(
-        children: auditLog.asMap().entries.map((entry) {
-          return Column(
-            children: <Widget>[
-              _AuditLogRow(entry: entry.value),
-              if (entry.key != auditLog.length - 1) const Divider(height: 20),
-            ],
-          );
-        }).toList(),
-      ),
-    );
-  }
-}
-
-class _ModernAuditLogPanel extends StatelessWidget {
-  const _ModernAuditLogPanel({required this.auditLog});
-
-  final List<_AuditEntry> auditLog;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: TaraTheme.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: TaraTheme.border),
-        boxShadow: const <BoxShadow>[
-          BoxShadow(
-            color: Color(0x0D0F172A),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: auditLog.asMap().entries.map((entry) {
-          final bool last = entry.key == auditLog.length - 1;
-          return _ModernAuditLogItem(entry: entry.value, last: last);
-        }).toList(),
-      ),
-    );
-  }
-}
-
-class _ModernAuditLogItem extends StatelessWidget {
-  const _ModernAuditLogItem({required this.entry, required this.last});
-
-  final _AuditEntry entry;
-  final bool last;
-
-  @override
-  Widget build(BuildContext context) {
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Column(
-            children: <Widget>[
-              Container(
-                height: 34,
-                width: 34,
-                decoration: BoxDecoration(
-                  color: entry.tint,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(entry.icon, color: entry.iconColor, size: 17),
-              ),
-              if (!last)
-                Expanded(
-                  child: Container(
-                    width: 1,
-                    margin: const EdgeInsets.symmetric(vertical: 6),
-                    color: TaraTheme.border,
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(bottom: last ? 0 : 14),
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: TaraTheme.border),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      entry.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontSize: 13,
-                        height: 1.15,
-                        letterSpacing: 0,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      entry.detail,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: TaraTheme.textPrimary.withValues(alpha: 0.72),
-                        fontSize: 10,
-                        height: 1.2,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AuditLogRow extends StatelessWidget {
-  const _AuditLogRow({required this.entry});
-
-  final _AuditEntry entry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        Container(
-          height: 28,
-          width: 28,
-          decoration: BoxDecoration(
-            color: entry.tint,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(entry.icon, color: entry.iconColor, size: 14),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                entry.title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontSize: 11,
-                  height: 1.1,
-                  letterSpacing: 0,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                entry.detail,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: TaraTheme.textPrimary.withValues(alpha: 0.72),
-                  fontSize: 9,
-                  height: 1,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _AdminUsersPanel extends StatelessWidget {
-  const _AdminUsersPanel({required this.searchController});
-
-  final TextEditingController searchController;
-
-  static const List<_AdminUserSummary> _users = <_AdminUserSummary>[
-    _AdminUserSummary(
-      initials: 'AS',
-      name: 'Ana Santos',
-      email: 'ana.santos@example.ph',
-      role: 'Consumer',
-      status: 'Active',
-      note: 'Joined Apr 18',
-      tint: Color(0xFFEAF2FF),
-      iconColor: Color(0xFF155BFF),
-    ),
-    _AdminUserSummary(
-      initials: 'JR',
-      name: 'Juan Reyes',
-      email: 'juan.reyes@example.ph',
-      role: 'MSME',
-      status: 'Pending',
-      note: 'Role request',
-      tint: TaraTheme.primaryTint,
-      iconColor: TaraTheme.primaryDark,
-    ),
-    _AdminUserSummary(
-      initials: 'F3',
-      name: 'FIC Station 3',
-      email: 'fic.station3@dost.gov',
-      role: 'Facility',
-      status: 'Active',
-      note: 'Caraga region',
-      tint: Color(0xFFEAF8D9),
-      iconColor: TaraTheme.mintText,
-    ),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        const _AdminSectionTitle('USERS'),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: TaraTheme.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: TaraTheme.border),
-            boxShadow: const <BoxShadow>[
-              BoxShadow(
-                color: Color(0x0D0F172A),
-                blurRadius: 10,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            children: <Widget>[
-              TextField(
-                controller: searchController,
-                textInputAction: TextInputAction.search,
-                decoration: InputDecoration(
-                  hintText: 'Search users',
-                  prefixIcon: const Icon(Icons.search_rounded, size: 18),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: TaraTheme.border),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: TaraTheme.border),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              ..._users.asMap().entries.map((entry) {
-                return Padding(
-                  padding: EdgeInsets.only(
-                    bottom: entry.key == _users.length - 1 ? 0 : 8,
-                  ),
-                  child: _AdminUserListTile(user: entry.value),
-                );
-              }),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _AdminStudiesPanel extends StatelessWidget {
-  const _AdminStudiesPanel();
-
-  static const List<_AdminStudySummary> _studies = <_AdminStudySummary>[
-    _AdminStudySummary(
-      title: 'Dried Mango Texture Evaluation',
-      owner: 'Caraga Food Innovation Lab',
-      status: 'Active',
-      method: 'Consumer test',
-      responses: '24 / 30',
-      schedule: 'May 12',
-      tint: Color(0xFFEAF8D9),
-      statusColor: TaraTheme.mintText,
-    ),
-    _AdminStudySummary(
-      title: 'Cacao Dark Chocolate Study',
-      owner: 'FIC Station 3',
-      status: 'Pending approval',
-      method: 'Sensory panel',
-      responses: '0 / 40',
-      schedule: 'May 18',
-      tint: TaraTheme.primaryTint,
-      statusColor: TaraTheme.primaryDark,
-    ),
-    _AdminStudySummary(
-      title: 'Coconut Vinegar Taste Test',
-      owner: 'Ana Santos Foods',
-      status: 'Draft',
-      method: 'Preference test',
-      responses: 'Not live',
-      schedule: 'Unscheduled',
-      tint: Color(0xFFF3F4F6),
-      statusColor: TaraTheme.textSecondary,
-    ),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        const _AdminSectionTitle('STUDIES'),
-        const SizedBox(height: 8),
-        _ResponsiveAdminCards(
-          children: _studies
-              .map((_AdminStudySummary study) => _AdminStudyCard(study: study))
-              .toList(),
-        ),
-      ],
-    );
-  }
-}
-
-class _ResponsiveAdminCards extends StatelessWidget {
-  const _ResponsiveAdminCards({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final int columns = constraints.maxWidth >= 980
-            ? 3
-            : constraints.maxWidth >= 620
-            ? 2
-            : 1;
-        final double cardWidth = columns == 1
-            ? constraints.maxWidth
-            : (constraints.maxWidth - (10 * (columns - 1))) / columns;
-
-        return Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: children
-              .map((Widget child) => SizedBox(width: cardWidth, child: child))
-              .toList(),
-        );
-      },
-    );
-  }
-}
-
-class _AdminUserListTile extends StatelessWidget {
-  const _AdminUserListTile({required this.user});
-
-  final _AdminUserSummary user;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(11),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: TaraTheme.border),
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final bool compact = constraints.maxWidth < 430;
-          final Widget identity = Row(
-            children: <Widget>[
-              CircleAvatar(
-                radius: 19,
-                backgroundColor: user.tint,
-                child: Text(
-                  user.initials,
-                  style: TextStyle(
-                    color: user.iconColor,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      user.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontSize: 13,
-                        height: 1.1,
-                        letterSpacing: 0,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      user.email,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontSize: 10,
-                        height: 1.1,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          );
-          final Widget chips = Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: <Widget>[
-              _AdminStatusChip(label: user.role),
-              _AdminStatusChip(
-                label: user.status,
-                background: user.tint,
-                foreground: user.iconColor,
-              ),
-            ],
-          );
-
-          if (compact) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                identity,
-                const SizedBox(height: 10),
-                chips,
-                const SizedBox(height: 8),
-                _AdminUserNote(note: user.note),
-              ],
-            );
-          }
-
-          return Row(
-            children: <Widget>[
-              Expanded(child: identity),
-              const SizedBox(width: 10),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 180),
-                child: chips,
-              ),
-              const SizedBox(width: 10),
-              SizedBox(width: 92, child: _AdminUserNote(note: user.note)),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _AdminUserNote extends StatelessWidget {
-  const _AdminUserNote({required this.note});
-
-  final String note;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      note,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-        color: TaraTheme.textPrimary.withValues(alpha: 0.72),
-        fontSize: 10,
-      ),
-    );
-  }
-}
-
-class _AdminStudyCard extends StatelessWidget {
-  const _AdminStudyCard({required this.study});
-
-  final _AdminStudySummary study;
-
-  @override
-  Widget build(BuildContext context) {
-    return _AdminCompactCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Container(
-                height: 36,
-                width: 36,
-                decoration: BoxDecoration(
-                  color: study.tint,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  Icons.fact_check_outlined,
-                  color: study.statusColor,
-                  size: 18,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      study.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontSize: 13,
-                        height: 1.15,
-                        letterSpacing: 0,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      study.owner,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontSize: 10,
-                        height: 1.1,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: <Widget>[
-              _AdminStatusChip(
-                label: study.status,
-                background: study.tint,
-                foreground: study.statusColor,
-              ),
-              _AdminStatusChip(label: study.method),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: _AdminMiniMetric(
-                  label: 'Responses',
-                  value: study.responses,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _AdminMiniMetric(
-                  label: 'Schedule',
-                  value: study.schedule,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AdminCompactCard extends StatelessWidget {
-  const _AdminCompactCard({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: TaraTheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: TaraTheme.border),
-        boxShadow: const <BoxShadow>[
-          BoxShadow(
-            color: Color(0x0D0F172A),
-            blurRadius: 8,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: child,
-    );
-  }
-}
-
-class _AdminStatusChip extends StatelessWidget {
-  const _AdminStatusChip({
-    required this.label,
-    this.background = const Color(0xFFF3F4F6),
-    this.foreground = TaraTheme.textPrimary,
+    this.background = const Color(0xFFF1F5F9),
+    this.foreground = const Color(0xFF334155),
   });
 
   final String label;
@@ -1254,125 +1595,19 @@ class _AdminStatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
         style: TextStyle(
           color: foreground,
-          fontSize: 9,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
           height: 1,
-          fontWeight: FontWeight.w900,
         ),
-      ),
-    );
-  }
-}
-
-class _AdminMiniMetric extends StatelessWidget {
-  const _AdminMiniMetric({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: TaraTheme.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: TaraTheme.textSecondary,
-              fontSize: 9,
-              height: 1,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: TaraTheme.textPrimary,
-              fontSize: 10,
-              height: 1,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AdminSimpleRow extends StatelessWidget {
-  const _AdminSimpleRow({required this.title, required this.detail});
-
-  final String title;
-  final String detail;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        const Icon(Icons.chevron_right_rounded, size: 18),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontSize: 12,
-                  letterSpacing: 0,
-                ),
-              ),
-              Text(
-                detail,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontSize: 10,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _AdminSectionTitle extends StatelessWidget {
-  const _AdminSectionTitle(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      label,
-      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-        color: TaraTheme.textPrimary.withValues(alpha: 0.72),
-        fontSize: 10,
-        fontWeight: FontWeight.w900,
-        letterSpacing: 0.7,
-        height: 1,
       ),
     );
   }
@@ -1392,43 +1627,37 @@ class _AdminBottomNav extends StatelessWidget {
     return DecoratedBox(
       decoration: const BoxDecoration(
         color: TaraTheme.surface,
-        border: Border(top: BorderSide(color: TaraTheme.border)),
+        border: Border(top: BorderSide(color: Color(0xFFD7E0EC))),
       ),
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 58,
+          height: 60,
           child: Row(
             children: <Widget>[
               _AdminNavItem(
-                icon: Icons.grid_view_rounded,
+                icon: Icons.grid_view_outlined,
                 label: 'Dashboard',
                 selected: currentView == _AdminView.dashboard,
                 onTap: () => onChanged(_AdminView.dashboard),
               ),
               _AdminNavItem(
-                icon: Icons.person_outline_rounded,
+                icon: Icons.group_outlined,
                 label: 'Users',
                 selected: currentView == _AdminView.users,
                 onTap: () => onChanged(_AdminView.users),
               ),
               _AdminNavItem(
-                icon: Icons.article_outlined,
-                label: 'Studies',
-                selected: currentView == _AdminView.studies,
-                onTap: () => onChanged(_AdminView.studies),
-              ),
-              _AdminNavItem(
-                icon: Icons.format_align_center_rounded,
-                label: 'Logs',
-                selected: currentView == _AdminView.logs,
-                onTap: () => onChanged(_AdminView.logs),
+                icon: Icons.verified_user_outlined,
+                label: 'Requests',
+                selected: currentView == _AdminView.roleRequests,
+                onTap: () => onChanged(_AdminView.roleRequests),
               ),
               _AdminNavItem(
                 icon: Icons.person_outline_rounded,
                 label: 'Profile',
-                selected: currentView == _AdminView.settings,
-                onTap: () => onChanged(_AdminView.settings),
+                selected: currentView == _AdminView.profile,
+                onTap: () => onChanged(_AdminView.profile),
               ),
             ],
           ),
@@ -1461,17 +1690,15 @@ class _AdminNavItem extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Icon(icon, color: color, size: 17),
-              const SizedBox(height: 3),
+              Icon(icon, color: color, size: 18),
+              const SizedBox(height: 4),
               Text(
                 label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: color,
-                  fontSize: 8,
-                  height: 1,
+                  fontSize: 10,
                   fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
+                  height: 1,
                 ),
               ),
             ],
@@ -1481,6 +1708,54 @@ class _AdminNavItem extends StatelessWidget {
     );
   }
 }
+
+class _AdminMetric {
+  const _AdminMetric({
+    required this.icon,
+    required this.value,
+    required this.label,
+    required this.note,
+    required this.tint,
+    required this.iconColor,
+  });
+
+  final IconData icon;
+  final String value;
+  final String label;
+  final String note;
+  final Color tint;
+  final Color iconColor;
+}
+
+class _AdminUserRecord {
+  const _AdminUserRecord({
+    required this.initials,
+    required this.name,
+    required this.email,
+    required this.role,
+    required this.status,
+    required this.note,
+  });
+
+  final String initials;
+  final String name;
+  final String email;
+  final String role;
+  final String status;
+  final String note;
+}
+
+class _AdminProfileField {
+  const _AdminProfileField({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+}
+
+const List<_RoleRequestDraft> _roleRequests = <_RoleRequestDraft>[];
 
 class _RoleRequestDraft {
   const _RoleRequestDraft({
@@ -1494,78 +1769,20 @@ class _RoleRequestDraft {
   final String detail;
 }
 
-class _AdminUserSummary {
-  const _AdminUserSummary({
-    required this.initials,
-    required this.name,
-    required this.email,
-    required this.role,
-    required this.status,
-    required this.note,
-    required this.tint,
-    required this.iconColor,
-  });
-
-  final String initials;
-  final String name;
-  final String email;
-  final String role;
-  final String status;
-  final String note;
-  final Color tint;
-  final Color iconColor;
-}
-
-class _AdminStudySummary {
-  const _AdminStudySummary({
-    required this.title,
-    required this.owner,
-    required this.status,
-    required this.method,
-    required this.responses,
-    required this.schedule,
-    required this.tint,
-    required this.statusColor,
-  });
-
-  final String title;
-  final String owner;
-  final String status;
-  final String method;
-  final String responses;
-  final String schedule;
-  final Color tint;
-  final Color statusColor;
-}
-
-class _AuditEntry {
-  const _AuditEntry({
-    required this.icon,
-    required this.title,
-    required this.detail,
-    required this.tint,
-    required this.iconColor,
-  });
-
-  final IconData icon;
-  final String title;
-  final String detail;
-  final Color tint;
-  final Color iconColor;
-}
-
-String _adminInitials(String value) {
-  final List<String> parts = value
-      .trim()
-      .split(RegExp(r'\s+'))
-      .where((String part) => part.isNotEmpty)
-      .toList();
-  if (parts.isEmpty) {
-    return 'AD';
-  }
-  if (parts.length == 1) {
-    return parts.first.substring(0, 1).toUpperCase();
-  }
-  return '${parts.first.substring(0, 1)}${parts.last.substring(0, 1)}'
-      .toUpperCase();
+String _adminDateLabel(DateTime date) {
+  const List<String> months = <String>[
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  return '${months[date.month - 1]} ${date.day}, ${date.year}';
 }
