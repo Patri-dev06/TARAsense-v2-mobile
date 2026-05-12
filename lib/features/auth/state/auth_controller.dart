@@ -207,15 +207,9 @@ class AuthController extends Notifier<AuthState> {
       if (error.response?.statusCode == 404) {
         return formatApiError(error, includeUri: true);
       }
-      if (error.type == DioExceptionType.connectionError) {
-        final String message = error.message?.toLowerCase() ?? '';
-        if (message.contains('connection refused') ||
-            message.contains('failed host lookup') ||
-            message.contains('connection closed')) {
-          return 'Cannot connect to API at ${AppConfig.apiBaseUrl}. '
-              'Make sure the TARAsense API is running.';
-        }
-        return 'Cannot connect to API at ${AppConfig.apiBaseUrl}.';
+      if (error.type == DioExceptionType.connectionError ||
+          error.type == DioExceptionType.unknown) {
+        return 'Connection failed. Please try again.';
       }
       return formatApiError(error, includeUri: true);
     }

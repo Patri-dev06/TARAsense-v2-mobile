@@ -10,11 +10,24 @@ class AppConfig {
 
   static const String productionApiBaseUrl =
       'https://tarasense.dostcaraga.ph/api/mobile/v1';
+  static const String productionWebBaseUrl = 'https://tarasense.dostcaraga.ph';
 
   static String get apiBaseUrl => _normalizeBaseUrl(
     const String.fromEnvironment('API_BASE_URL', defaultValue: ''),
     fallback: _defaultApiBaseUrl(),
   );
+
+  static String get webBaseUrl => _normalizeBaseUrl(
+    const String.fromEnvironment('WEB_BASE_URL', defaultValue: ''),
+    fallback: _webBaseFromApiBase(apiBaseUrl),
+  );
+
+  static Uri publicStudyRegistrationUri(String studyId) {
+    return Uri.parse(webBaseUrl).replace(
+      path: '/login',
+      queryParameters: <String, String>{'next': '/studies/$studyId/start'},
+    );
+  }
 
   static String _defaultApiBaseUrl() {
     // Mobile should use the same deployed backend as the web application.
@@ -37,5 +50,20 @@ class AppConfig {
     return selected.endsWith('/')
         ? selected.substring(0, selected.length - 1)
         : selected;
+  }
+
+  static String _webBaseFromApiBase(String value) {
+    final String normalized = _normalizeBaseUrl(
+      value,
+      fallback: productionApiBaseUrl,
+    );
+    const String mobileApiSuffix = '/api/mobile/v1';
+    if (normalized.endsWith(mobileApiSuffix)) {
+      return normalized.substring(
+        0,
+        normalized.length - mobileApiSuffix.length,
+      );
+    }
+    return productionWebBaseUrl;
   }
 }

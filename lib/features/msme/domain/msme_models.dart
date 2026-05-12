@@ -34,6 +34,8 @@ class MsmeStudyItem {
     required this.responseCount,
     required this.participantCount,
     required this.statusLabel,
+    this.publicRegistrationUrl = '',
+    this.qrCodeUrl = '',
   });
 
   final String id;
@@ -47,6 +49,8 @@ class MsmeStudyItem {
   final int responseCount;
   final int participantCount;
   final String statusLabel;
+  final String publicRegistrationUrl;
+  final String qrCodeUrl;
 
   double get progress {
     if (sampleSize <= 0) {
@@ -68,6 +72,14 @@ class MsmeStudyItem {
       responseCount: _asInt(json['responseCount']),
       participantCount: _asInt(json['participantCount']),
       statusLabel: (json['statusLabel'] ?? '').toString(),
+      publicRegistrationUrl:
+          (json['publicRegistrationUrl'] ??
+                  json['registrationUrl'] ??
+                  json['publicUrl'] ??
+                  json['registrationLink'] ??
+                  '')
+              .toString(),
+      qrCodeUrl: (json['qrCodeUrl'] ?? json['qrUrl'] ?? '').toString(),
     );
   }
 }
@@ -90,7 +102,9 @@ class MsmeDashboardData {
   factory MsmeDashboardData.fromJson(Map<String, dynamic> json) {
     final rawStudies = (json['studies'] as List<dynamic>? ?? <dynamic>[])
         .whereType<Map>()
-        .map((Map item) => MsmeStudyItem.fromJson(Map<String, dynamic>.from(item)))
+        .map(
+          (Map item) => MsmeStudyItem.fromJson(Map<String, dynamic>.from(item)),
+        )
         .toList();
 
     return MsmeDashboardData(
@@ -161,9 +175,8 @@ class CategoryProfileOption {
     final rawAttributes = (json['attributes'] as List<dynamic>? ?? <dynamic>[])
         .whereType<Map>()
         .map(
-          (Map item) => StudyAttributeSeed.fromJson(
-            Map<String, dynamic>.from(item),
-          ),
+          (Map item) =>
+              StudyAttributeSeed.fromJson(Map<String, dynamic>.from(item)),
         )
         .toList();
 
@@ -240,23 +253,27 @@ class StudyBuilderOptionsData {
       sensoryStudyTypes: _parseOptions(json['sensoryStudyTypes']),
       consumerObjectives: _parseOptions(json['consumerObjectives']),
       attributeDimensions: _parseStringList(json['attributeDimensions']),
-      categoryProfiles: (json['categoryProfiles'] as List<dynamic>? ?? <dynamic>[])
-          .whereType<Map>()
-          .map(
-            (Map item) =>
-                CategoryProfileOption.fromJson(Map<String, dynamic>.from(item)),
-          )
-          .toList(),
+      categoryProfiles:
+          (json['categoryProfiles'] as List<dynamic>? ?? <dynamic>[])
+              .whereType<Map>()
+              .map(
+                (Map item) => CategoryProfileOption.fromJson(
+                  Map<String, dynamic>.from(item),
+                ),
+              )
+              .toList(),
       regions: _parseStringList(json['regions']),
       facilitiesByRegion: _parseStringMap(json['facilitiesByRegion']),
       questionnaireNotes: _parseStringList(json['questionnaireNotes']),
-      sessionTemplates: (json['sessionTemplates'] as List<dynamic>? ?? <dynamic>[])
-          .whereType<Map>()
-          .map(
-            (Map item) =>
-                SessionTemplateOption.fromJson(Map<String, dynamic>.from(item)),
-          )
-          .toList(),
+      sessionTemplates:
+          (json['sessionTemplates'] as List<dynamic>? ?? <dynamic>[])
+              .whereType<Map>()
+              .map(
+                (Map item) => SessionTemplateOption.fromJson(
+                  Map<String, dynamic>.from(item),
+                ),
+              )
+              .toList(),
     );
   }
 }
@@ -399,7 +416,9 @@ class MsmeProfileData {
           )
           .toList(),
       metadata: ProfileMetadata.fromJson(
-        Map<String, dynamic>.from(json['metadata'] as Map? ?? <String, dynamic>{}),
+        Map<String, dynamic>.from(
+          json['metadata'] as Map? ?? <String, dynamic>{},
+        ),
       ),
       lifestyleOptions: _parseOptions(options['lifestyles']),
       dietaryOptions: _parseOptions(options['dietaryPrefs']),
@@ -423,7 +442,9 @@ List<String> _parseStringList(dynamic value) {
 
 Map<String, List<String>> _parseStringMap(dynamic value) {
   final Map<String, List<String>> output = <String, List<String>>{};
-  final rawMap = Map<String, dynamic>.from(value as Map? ?? <String, dynamic>{});
+  final rawMap = Map<String, dynamic>.from(
+    value as Map? ?? <String, dynamic>{},
+  );
   for (final MapEntry<String, dynamic> entry in rawMap.entries) {
     output[entry.key] = _parseStringList(entry.value);
   }

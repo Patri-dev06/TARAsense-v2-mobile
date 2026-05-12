@@ -7,6 +7,8 @@ class _ConsumerMobilePortal extends StatelessWidget {
     required this.email,
     required this.organization,
     required this.searchController,
+    required this.studiesAsync,
+    required this.completedStudiesAsync,
     required this.onViewChanged,
     required this.authBusy,
     required this.onLogout,
@@ -17,6 +19,8 @@ class _ConsumerMobilePortal extends StatelessWidget {
   final String email;
   final String? organization;
   final TextEditingController searchController;
+  final AsyncValue<List<ConsumerStudy>> studiesAsync;
+  final AsyncValue<List<ConsumerStudy>> completedStudiesAsync;
   final ValueChanged<_ConsumerView> onViewChanged;
   final bool authBusy;
   final VoidCallback? onLogout;
@@ -48,13 +52,16 @@ class _ConsumerMobilePortal extends StatelessWidget {
               const SizedBox(height: 16),
             ],
             if (showDiscover)
-              _ConsumerDiscoverBody(searchController: searchController)
+              _ConsumerDiscoverBody(
+                searchController: searchController,
+                studiesAsync: studiesAsync,
+              )
             else if (currentView == _ConsumerView.profile)
               _ConsumerMobileProfileCard(userName: userName)
             else if (currentView == _ConsumerView.completedSurveys)
-              const _ConsumerMobileEmptyState(
-                title: 'No completed sessions yet',
-                message: 'Completed tastings will appear here after submission.',
+              _ConsumerCompletedBody(
+                completedStudiesAsync: completedStudiesAsync,
+                searchQuery: '',
               )
             else if (currentView == _ConsumerView.settings)
               _ConsumerMobileSettingsCard(
@@ -87,29 +94,39 @@ class _ConsumerMobileHeader extends StatelessWidget {
     final String displayName = userName.trim().isEmpty
         ? 'Consumer'
         : userName.trim();
+    final String greeting = _timeGreeting(DateTime.now().hour);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: <Widget>[
-        Text(
-          'Good morning,',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: TaraTheme.textPrimary,
-            fontSize: 11,
-            height: 1,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                greeting,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: TaraTheme.textSecondary,
+                  fontSize: 11,
+                  height: 1,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                displayName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontSize: 20,
+                  height: 1,
+                  letterSpacing: 0,
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          displayName,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontSize: 20,
-            height: 1,
-            letterSpacing: 0,
-          ),
-        ),
+        const SizedBox(width: 12),
+        _ConsumerHeaderAvatar(initials: _consumerInitials(displayName)),
       ],
     );
   }
@@ -164,27 +181,92 @@ class _ConsumerMobileSearchField extends StatelessWidget {
 }
 
 class _ConsumerDiscoverBody extends StatelessWidget {
-  const _ConsumerDiscoverBody({required this.searchController});
+  const _ConsumerDiscoverBody({
+    required this.searchController,
+    required this.studiesAsync,
+  });
 
   final TextEditingController searchController;
+  final AsyncValue<List<ConsumerStudy>> studiesAsync;
+
+  @override
+  Widget build(BuildContext context) {
+    final int? count = studiesAsync.maybeWhen(
+      data: (s) => s.length,
+      orElse: () => null,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        _ConsumerMobileSearchField(controller: searchController),
+        const SizedBox(height: 14),
+        Row(
+          children: <Widget>[
+            _ConsumerMobileSectionTitle('OPEN STUDIES'),
+            if (count != null && count > 0) ...<Widget>[
+              const SizedBox(width: 8),
+              _ConsumerStudyCountBadge(count: count),
+            ],
+          ],
+        ),
+        const SizedBox(height: 8),
+        _ConsumerStudyList(
+          studiesAsync: studiesAsync,
+          searchQuery: searchController.text,
+          compact: true,
+        ),
+      ],
+    );
+  }
+}
+
+class _ConsumerStudyCountBadge extends StatelessWidget {
+  const _ConsumerStudyCountBadge({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: TaraTheme.primary,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        count.toString(),
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.w900,
+          height: 1,
+        ),
+      ),
+    );
+  }
+}
+
+class _ConsumerCompletedBody extends StatelessWidget {
+  const _ConsumerCompletedBody({
+    required this.completedStudiesAsync,
+    required this.searchQuery,
+  });
+
+  final AsyncValue<List<ConsumerStudy>> completedStudiesAsync;
+  final String searchQuery;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        _ConsumerMobileSearchField(controller: searchController),
-        const SizedBox(height: 14),
-        _ConsumerMobileSectionTitle('OPEN STUDIES'),
+        _ConsumerMobileSectionTitle('COMPLETED SURVEYS'),
         const SizedBox(height: 8),
-        ..._availableSurveys.map(
-          (_ConsumerSurvey survey) => Padding(
-            padding: const EdgeInsets.only(bottom: 0),
-            child: _ConsumerStudyListTile(
-              survey: survey,
-              compact: true,
-            ),
-          ),
+        _CompletedStudyList(
+          studiesAsync: completedStudiesAsync,
+          searchQuery: searchQuery,
+          compact: true,
         ),
       ],
     );
@@ -203,10 +285,7 @@ class _ConsumerMobileFilterRail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const List<_ConsumerFilterItem> filters = <_ConsumerFilterItem>[
-      _ConsumerFilterItem(
-        label: 'Discover',
-        view: _ConsumerView.dashboard,
-      ),
+      _ConsumerFilterItem(label: 'Discover', view: _ConsumerView.dashboard),
       _ConsumerFilterItem(
         label: 'My applications',
         view: _ConsumerView.roleApplications,
@@ -319,7 +398,9 @@ class _ConsumerMobileApplications extends StatelessWidget {
               _ApplicationSummaryChip(
                 label: 'Reviewing',
                 value:
-                    (_consumerApplications.length - confirmedCount - pendingCount)
+                    (_consumerApplications.length -
+                            confirmedCount -
+                            pendingCount)
                         .toString(),
                 tint: const Color(0xFFF4F4F5),
                 textColor: TaraTheme.textSecondary,
@@ -327,20 +408,29 @@ class _ConsumerMobileApplications extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          ..._consumerApplications.asMap().entries.map((entry) {
-            final bool isLast = entry.key == _consumerApplications.length - 1;
-            return Column(
-              children: <Widget>[
-                _ApplicationListItem(application: entry.value),
-                if (!isLast)
-                  const Divider(
-                    height: 18,
-                    thickness: 1,
-                    color: Color(0xFFF0E8DF),
-                  ),
-              ],
-            );
-          }),
+          if (_consumerApplications.isEmpty)
+            Text(
+              'No active applications to show.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: TaraTheme.textSecondary,
+                fontWeight: FontWeight.w700,
+              ),
+            )
+          else
+            ..._consumerApplications.asMap().entries.map((entry) {
+              final bool isLast = entry.key == _consumerApplications.length - 1;
+              return Column(
+                children: <Widget>[
+                  _ApplicationListItem(application: entry.value),
+                  if (!isLast)
+                    const Divider(
+                      height: 18,
+                      thickness: 1,
+                      color: Color(0xFFF0E8DF),
+                    ),
+                ],
+              );
+            }),
         ],
       ),
     );
@@ -439,7 +529,9 @@ class _ApplicationListItem extends StatelessWidget {
             height: 32,
             width: 32,
             decoration: BoxDecoration(
-              color: confirmed ? const Color(0xFFEAF8D9) : TaraTheme.primaryTint,
+              color: confirmed
+                  ? const Color(0xFFEAF8D9)
+                  : TaraTheme.primaryTint,
               borderRadius: BorderRadius.circular(9),
             ),
             child: Icon(
@@ -489,10 +581,7 @@ class _ApplicationListItem extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          _ConsumerStatusPill(
-            label: application.status,
-            confirmed: confirmed,
-          ),
+          _ConsumerStatusPill(label: application.status, confirmed: confirmed),
         ],
       ),
     );
@@ -582,36 +671,6 @@ class _ConsumerMobileProfileCard extends StatelessWidget {
               style: Theme.of(context).textTheme.titleMedium,
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ConsumerMobileEmptyState extends StatelessWidget {
-  const _ConsumerMobileEmptyState({
-    required this.title,
-    required this.message,
-  });
-
-  final String title;
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: TaraTheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: TaraTheme.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(title, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 6),
-          Text(message, style: Theme.of(context).textTheme.bodySmall),
         ],
       ),
     );
@@ -709,60 +768,60 @@ class _ConsumerMobileSettingsCard extends StatelessWidget {
       child: SizedBox(
         height: MediaQuery.sizeOf(context).height - 190,
         child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              CircleAvatar(
-                backgroundColor: TaraTheme.primaryTint,
-                child: Text(
-                  _consumerInitials(userName),
-                  style: const TextStyle(
-                    color: TaraTheme.primaryDark,
-                    fontWeight: FontWeight.w900,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                CircleAvatar(
+                  backgroundColor: TaraTheme.primaryTint,
+                  child: Text(
+                    _consumerInitials(userName),
+                    style: const TextStyle(
+                      color: TaraTheme.primaryDark,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  userName,
-                  style: Theme.of(context).textTheme.titleMedium,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    userName,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          _ConsumerMobileSettingsFormGrid(
-            fields: <_ConsumerMobileSettingsField>[
-              _ConsumerMobileSettingsField(label: 'Name', value: userName),
-              _ConsumerMobileSettingsField(label: 'Email', value: email),
-              const _ConsumerMobileSettingsField(
-                label: 'Role',
-                value: 'Consumer',
-              ),
-              if (organization != null && organization!.trim().isNotEmpty)
-                _ConsumerMobileSettingsField(
-                  label: 'Organization',
-                  value: organization!.trim(),
+              ],
+            ),
+            const SizedBox(height: 14),
+            _ConsumerMobileSettingsFormGrid(
+              fields: <_ConsumerMobileSettingsField>[
+                _ConsumerMobileSettingsField(label: 'Name', value: userName),
+                _ConsumerMobileSettingsField(label: 'Email', value: email),
+                const _ConsumerMobileSettingsField(
+                  label: 'Role',
+                  value: 'Consumer',
                 ),
-            ],
-          ),
-          const Spacer(),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: authBusy ? null : onLogout,
-              icon: const Icon(Icons.logout_rounded),
-              label: const Text('Log out'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: TaraTheme.roseText,
-                side: const BorderSide(color: Color(0xFFFECDD3)),
+                if (organization != null && organization!.trim().isNotEmpty)
+                  _ConsumerMobileSettingsField(
+                    label: 'Organization',
+                    value: organization!.trim(),
+                  ),
+              ],
+            ),
+            const Spacer(),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: authBusy ? null : onLogout,
+                icon: const Icon(Icons.logout_rounded),
+                label: const Text('Log out'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: TaraTheme.roseText,
+                  side: const BorderSide(color: Color(0xFFFECDD3)),
+                ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
@@ -773,6 +832,44 @@ class _ConsumerFilterItem {
 
   final String label;
   final _ConsumerView view;
+}
+
+class _ConsumerHeaderAvatar extends StatelessWidget {
+  const _ConsumerHeaderAvatar({required this.initials});
+
+  final String initials;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 38,
+      width: 38,
+      decoration: BoxDecoration(
+        color: TaraTheme.primaryTint,
+        shape: BoxShape.circle,
+        border: Border.all(color: const Color(0xFFFFD8B5), width: 1.5),
+      ),
+      child: Center(
+        child: Text(
+          initials,
+          style: const TextStyle(
+            color: TaraTheme.primaryDark,
+            fontWeight: FontWeight.w900,
+            fontSize: 13,
+            height: 1,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String _timeGreeting(int hour) {
+  if (hour >= 5 && hour < 12) return 'Good morning,';
+  if (hour >= 12 && hour < 17) return 'Good afternoon,';
+  if (hour >= 17 && hour < 21) return 'Good evening,';
+  return 'Good night,';
 }
 
 class _ConsumerMobileSettingsFormGrid extends StatelessWidget {
@@ -854,10 +951,18 @@ class _ConsumerMobileNavItem extends StatelessWidget {
                 fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
               ),
             ),
+            const SizedBox(height: 4),
+            Container(
+              height: 3,
+              width: 16,
+              decoration: BoxDecoration(
+                color: selected ? TaraTheme.primary : Colors.transparent,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 }
-

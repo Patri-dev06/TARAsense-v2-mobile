@@ -85,6 +85,35 @@ class _ApiTestPageState extends ConsumerState<ApiTestPage> {
             ),
           ),
 
+          _buildSection('FIC'),
+          _buildTestButton(
+            'GET /fic/dashboard',
+            'fic_dashboard',
+            () => _testEndpoint('fic_dashboard', api.testFicDashboard),
+          ),
+          _buildTestButton(
+            'GET /fic/studies?limit=50',
+            'fic_studies',
+            () => _testEndpoint('fic_studies', api.testFicStudies),
+          ),
+          _buildTestButton(
+            'GET /fic/calendar?limit=100',
+            'fic_calendar',
+            () => _testEndpoint('fic_calendar', api.testFicCalendar),
+          ),
+          _buildTestButton(
+            'GET /fic/availability?startDate=2026-05-01&endDate=2026-05-31',
+            'fic_availability',
+            () => _testEndpoint('fic_availability', api.testFicAvailability),
+          ),
+
+          _buildSection('Consumer'),
+          _buildTestButton(
+            'GET /consumer/studies',
+            'consumer_studies',
+            () => _testEndpoint('consumer_studies', api.testConsumerStudies),
+          ),
+
           _buildSection('Profile'),
           _buildTestButton(
             'GET /profile',

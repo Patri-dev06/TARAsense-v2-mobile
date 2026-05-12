@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:tarasense_mobile/core/network/api_error_formatter.dart';
 import 'package:tarasense_mobile/core/theme/tara_theme.dart';
 import 'package:tarasense_mobile/features/auth/state/auth_providers.dart';
 import 'package:tarasense_mobile/features/auth/ui/auth_loading_dialog.dart';
+import 'package:tarasense_mobile/features/tester/data/consumer_studies_api.dart';
+import 'package:tarasense_mobile/features/tester/domain/consumer_study.dart';
 
 part 'tester_mobile_portal.dart';
 part 'tester_desktop_shell.dart';
@@ -10,6 +14,31 @@ part 'tester_panels.dart';
 part 'tester_shared_widgets.dart';
 part 'tester_data.dart';
 
+final _consumerStudiesProvider =
+    FutureProvider.autoDispose<List<ConsumerStudy>>((ref) async {
+      final session = ref.watch(
+        authControllerProvider.select((state) => state.session),
+      );
+      final String accessToken = session?.tokens.accessToken ?? '';
+      if (accessToken.trim().isEmpty) {
+        return <ConsumerStudy>[];
+      }
+      return ref.watch(consumerStudiesApiProvider).fetchStudies(accessToken);
+    });
+
+final _completedConsumerStudiesProvider =
+    FutureProvider.autoDispose<List<ConsumerStudy>>((ref) async {
+      final session = ref.watch(
+        authControllerProvider.select((state) => state.session),
+      );
+      final String accessToken = session?.tokens.accessToken ?? '';
+      if (accessToken.trim().isEmpty) {
+        return <ConsumerStudy>[];
+      }
+      return ref
+          .watch(consumerStudiesApiProvider)
+          .fetchCompletedStudies(accessToken);
+    });
 
 enum _ConsumerView {
   dashboard,
@@ -36,11 +65,22 @@ class _TesterWorkspacePageState extends ConsumerState<TesterWorkspacePage> {
   _ConsumerView _currentView = _ConsumerView.dashboard;
 
   @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
   void dispose() {
+    _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _msmeReasonController.dispose();
     _ficReasonController.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged() {
+    setState(() {});
   }
 
   void _submitRoleApplication(String role) {
@@ -54,6 +94,12 @@ class _TesterWorkspacePageState extends ConsumerState<TesterWorkspacePage> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
     final session = authState.session;
+    final AsyncValue<List<ConsumerStudy>> studiesAsync = ref.watch(
+      _consumerStudiesProvider,
+    );
+    final AsyncValue<List<ConsumerStudy>> completedStudiesAsync = ref.watch(
+      _completedConsumerStudiesProvider,
+    );
     final bool useSidebar = MediaQuery.sizeOf(context).width >= 980;
 
     if (!useSidebar) {
@@ -63,14 +109,16 @@ class _TesterWorkspacePageState extends ConsumerState<TesterWorkspacePage> {
         email: session?.user.email ?? '',
         organization: session?.user.organization,
         searchController: _searchController,
+        studiesAsync: studiesAsync,
+        completedStudiesAsync: completedStudiesAsync,
         onViewChanged: (view) => setState(() => _currentView = view),
         authBusy: authState.isBusy,
         onLogout: authState.isBusy
             ? null
             : () => showLogoutLoadingAndRun(
-                  context,
-                  () => ref.read(authControllerProvider.notifier).logout(),
-                ),
+                context,
+                () => ref.read(authControllerProvider.notifier).logout(),
+              ),
       );
     }
 
@@ -81,6 +129,8 @@ class _TesterWorkspacePageState extends ConsumerState<TesterWorkspacePage> {
           children: <Widget>[
             _ConsumerSidebar(
               currentView: _currentView,
+              studiesAsync: studiesAsync,
+              completedStudiesAsync: completedStudiesAsync,
               onViewChanged: (view) => setState(() => _currentView = view),
             ),
             Expanded(
@@ -93,6 +143,8 @@ class _TesterWorkspacePageState extends ConsumerState<TesterWorkspacePage> {
                       email: session?.user.email ?? '',
                       organization: session?.user.organization,
                       searchController: _searchController,
+                      studiesAsync: studiesAsync,
+                      completedStudiesAsync: completedStudiesAsync,
                       msmeReasonController: _msmeReasonController,
                       ficReasonController: _ficReasonController,
                       onViewChanged: (view) =>
@@ -101,7 +153,8 @@ class _TesterWorkspacePageState extends ConsumerState<TesterWorkspacePage> {
                       authBusy: authState.isBusy,
                       onLogout: () => showLogoutLoadingAndRun(
                         context,
-                        () => ref.read(authControllerProvider.notifier).logout(),
+                        () =>
+                            ref.read(authControllerProvider.notifier).logout(),
                       ),
                     ),
                   ),

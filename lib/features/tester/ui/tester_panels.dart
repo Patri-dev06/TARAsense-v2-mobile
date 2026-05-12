@@ -14,9 +14,9 @@ class _DashboardPanel extends StatelessWidget {
           trailing: const Icon(Icons.keyboard_arrow_down_rounded),
           child: Text(
             'No urgent system messages. Available studies and role application updates will appear here.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: const Color(0xFF52657D),
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF52657D)),
           ),
         ),
         const SizedBox(height: 18),
@@ -45,29 +45,29 @@ class _DashboardPanel extends StatelessWidget {
 }
 
 class _AvailableSurveysPanel extends StatelessWidget {
-  const _AvailableSurveysPanel({required this.searchController});
+  const _AvailableSurveysPanel({
+    required this.searchController,
+    required this.studiesAsync,
+  });
 
   final TextEditingController searchController;
+  final AsyncValue<List<ConsumerStudy>> studiesAsync;
 
   @override
   Widget build(BuildContext context) {
     return _SectionPanel(
       title: 'Discover Studies',
-      badge: '3',
+      badge: _studyCountLabel(studiesAsync),
       trailing: const Icon(Icons.keyboard_arrow_up_rounded),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           _ConsumerSearchField(controller: searchController),
           const SizedBox(height: 12),
-          ..._availableSurveys.map(
-            (survey) => Padding(
-              padding: const EdgeInsets.only(bottom: 0),
-              child: _ConsumerStudyListTile(
-                survey: survey,
-                compact: false,
-              ),
-            ),
+          _ConsumerStudyList(
+            studiesAsync: studiesAsync,
+            searchQuery: searchController.text,
+            compact: false,
           ),
         ],
       ),
@@ -76,40 +76,24 @@ class _AvailableSurveysPanel extends StatelessWidget {
 }
 
 class _CompletedSurveysPanel extends StatelessWidget {
-  const _CompletedSurveysPanel();
+  const _CompletedSurveysPanel({
+    required this.completedStudiesAsync,
+    required this.searchQuery,
+  });
+
+  final AsyncValue<List<ConsumerStudy>> completedStudiesAsync;
+  final String searchQuery;
 
   @override
   Widget build(BuildContext context) {
     return _SectionPanel(
       title: 'Completed Surveys',
-      badge: '0',
+      badge: _studyCountLabel(completedStudiesAsync),
       trailing: const Icon(Icons.keyboard_arrow_up_rounded),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: TaraTheme.surface,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: TaraTheme.border),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              'No completed surveys yet.',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                letterSpacing: 0,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Completed studies will appear here after submission.',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: const Color(0xFF6B4A35),
-              ),
-            ),
-          ],
-        ),
+      child: _CompletedStudyList(
+        studiesAsync: completedStudiesAsync,
+        searchQuery: searchQuery,
+        compact: false,
       ),
     );
   }
@@ -135,9 +119,9 @@ class _RoleApplicationsPanel extends StatelessWidget {
         children: <Widget>[
           Text(
             'All accounts start as Consumer. Submit an application and wait for admin approval.',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: const Color(0xFF6B4A35),
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: const Color(0xFF6B4A35)),
           ),
           const SizedBox(height: 18),
           LayoutBuilder(
@@ -207,4 +191,3 @@ class _ProfilePanel extends StatelessWidget {
     );
   }
 }
-

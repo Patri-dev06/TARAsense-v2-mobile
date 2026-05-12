@@ -7,6 +7,7 @@ class _DashboardTab extends StatelessWidget {
     required this.dashboard,
     required this.onRefresh,
     required this.onRetry,
+    required this.onOpenStudy,
     required this.onOpenCreateStudy,
   });
 
@@ -15,6 +16,7 @@ class _DashboardTab extends StatelessWidget {
   final MsmeDashboardData? dashboard;
   final Future<void> Function() onRefresh;
   final VoidCallback onRetry;
+  final ValueChanged<MsmeStudyItem> onOpenStudy;
   final VoidCallback onOpenCreateStudy;
 
   @override
@@ -29,47 +31,48 @@ class _DashboardTab extends StatelessWidget {
           else if (error != null)
             _ErrorCard(message: error!, onRetry: onRetry)
           else if (dashboard != null) ...<Widget>[
-              Text(
-                dashboard!.workspaceLabel.trim().isEmpty
-                    ? 'MSME WORKSPACE'
-                    : dashboard!.workspaceLabel.toUpperCase(),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: const Color(0xFF52657D),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
+            Text(
+              dashboard!.workspaceLabel.trim().isEmpty
+                  ? 'MSME WORKSPACE'
+                  : dashboard!.workspaceLabel.toUpperCase(),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: const Color(0xFF52657D),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
               ),
-              const SizedBox(height: 6),
-              Text(
-                dashboard!.title.trim().isEmpty
-                    ? 'MSME Dashboard'
-                    : dashboard!.title,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: const Color(0xFF061A3A),
-                  letterSpacing: 0,
-                  height: 1.08,
-                ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              dashboard!.title.trim().isEmpty
+                  ? 'MSME Dashboard'
+                  : dashboard!.title,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: const Color(0xFF061A3A),
+                letterSpacing: 0,
+                height: 1.08,
               ),
-              const SizedBox(height: 6),
-              Text(
-                dashboard!.subtitle.trim().isEmpty
-                    ? 'Create and manage studies, coordinate with FIC, and monitor response progress in one view.'
-                    : dashboard!.subtitle,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: const Color(0xFF52657D),
-                ),
-              ),
-              const SizedBox(height: 18),
-              _DashboardStatsGrid(stats: dashboard!.stats),
-              const SizedBox(height: 18),
-              const Divider(height: 1),
-              const SizedBox(height: 18),
-              _WebStudyListPanel(
-                studies: dashboard!.studies,
-                onOpenCreateStudy: onOpenCreateStudy,
-                title: 'MSME Study List',
-              ),
-            ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              dashboard!.subtitle.trim().isEmpty
+                  ? 'Create and manage studies, coordinate with FIC, and monitor response progress in one view.'
+                  : dashboard!.subtitle,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF52657D)),
+            ),
+            const SizedBox(height: 18),
+            _DashboardStatsGrid(stats: dashboard!.stats),
+            const SizedBox(height: 18),
+            const Divider(height: 1),
+            const SizedBox(height: 18),
+            _WebStudyListPanel(
+              studies: dashboard!.studies,
+              onOpenStudy: onOpenStudy,
+              onOpenCreateStudy: onOpenCreateStudy,
+              title: 'MSME Study List',
+            ),
+          ],
         ],
       ),
     );
@@ -83,6 +86,7 @@ class _StudyHistoryTab extends StatelessWidget {
     required this.dashboard,
     required this.onRefresh,
     required this.onRetry,
+    required this.onOpenStudy,
     required this.onOpenCreateStudy,
   });
 
@@ -91,6 +95,7 @@ class _StudyHistoryTab extends StatelessWidget {
   final MsmeDashboardData? dashboard;
   final Future<void> Function() onRefresh;
   final VoidCallback onRetry;
+  final ValueChanged<MsmeStudyItem> onOpenStudy;
   final VoidCallback onOpenCreateStudy;
 
   @override
@@ -120,9 +125,9 @@ class _StudyHistoryTab extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             'Review imported, completed, and active MSME studies in the same format as the web dashboard.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: const Color(0xFF52657D),
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF52657D)),
           ),
           const SizedBox(height: 18),
           if (isLoading)
@@ -132,6 +137,7 @@ class _StudyHistoryTab extends StatelessWidget {
           else
             _WebStudyListPanel(
               studies: dashboard?.studies ?? <MsmeStudyItem>[],
+              onOpenStudy: onOpenStudy,
               onOpenCreateStudy: onOpenCreateStudy,
               title: 'MSME Study List',
             ),
@@ -193,7 +199,9 @@ class _DashboardStatsGrid extends StatelessWidget {
           spacing: 12,
           runSpacing: 12,
           children: items
-              .map((_WebStatData item) => _WebStatCard(item: item, width: width))
+              .map(
+                (_WebStatData item) => _WebStatCard(item: item, width: width),
+              )
               .toList(),
         );
       },
@@ -265,11 +273,12 @@ class _WebStatCard extends StatelessWidget {
                   children: <Widget>[
                     Text(
                       item.value,
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: const Color(0xFF061A3A),
-                        letterSpacing: 0,
-                        height: 1,
-                      ),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            color: const Color(0xFF061A3A),
+                            letterSpacing: 0,
+                            height: 1,
+                          ),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -288,9 +297,9 @@ class _WebStatCard extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             item.subtitle,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: const Color(0xFF52657D),
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: const Color(0xFF52657D)),
           ),
         ],
       ),
@@ -301,11 +310,13 @@ class _WebStatCard extends StatelessWidget {
 class _WebStudyListPanel extends StatelessWidget {
   const _WebStudyListPanel({
     required this.studies,
+    required this.onOpenStudy,
     required this.onOpenCreateStudy,
     required this.title,
   });
 
   final List<MsmeStudyItem> studies;
+  final ValueChanged<MsmeStudyItem> onOpenStudy;
   final VoidCallback onOpenCreateStudy;
   final String title;
 
@@ -363,6 +374,7 @@ class _WebStudyListPanel extends StatelessWidget {
                             padding: const EdgeInsets.only(bottom: 12),
                             child: _WebStudyHistoryCard(
                               study: study,
+                              onOpenStudy: onOpenStudy,
                               onOpenCreateStudy: onOpenCreateStudy,
                             ),
                           ),
@@ -379,15 +391,18 @@ class _WebStudyListPanel extends StatelessWidget {
 class _WebStudyHistoryCard extends StatelessWidget {
   const _WebStudyHistoryCard({
     required this.study,
+    required this.onOpenStudy,
     required this.onOpenCreateStudy,
   });
 
   final MsmeStudyItem study;
+  final ValueChanged<MsmeStudyItem> onOpenStudy;
   final VoidCallback onOpenCreateStudy;
 
   @override
   Widget build(BuildContext context) {
-    final bool completed = study.status.toUpperCase().contains('COMPLETED') ||
+    final bool completed =
+        study.status.toUpperCase().contains('COMPLETED') ||
         study.responseCount >= study.sampleSize && study.sampleSize > 0;
     return Container(
       width: double.infinity,
@@ -446,17 +461,11 @@ class _WebStudyHistoryCard extends StatelessWidget {
                 children: <Widget>[
                   _WebOutlineAction(
                     label: 'Form + QR',
-                    onTap: () => _showWebDashboardSnack(
-                      context,
-                      'Form and QR are ready to open.',
-                    ),
+                    onTap: () => onOpenStudy(study),
                   ),
                   _WebOutlineAction(
                     label: 'Open Dashboard',
-                    onTap: () => _showWebDashboardSnack(
-                      context,
-                      'Study dashboard is ready to open.',
-                    ),
+                    onTap: () => onOpenStudy(study),
                   ),
                   _WebStatusAction(
                     label: completed
@@ -575,7 +584,9 @@ class _WebOutlineAction extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         backgroundColor: TaraTheme.surface,
         foregroundColor: danger ? Colors.red : const Color(0xFF6B4A35),
-        side: BorderSide(color: danger ? const Color(0xFFE5E7EB) : TaraTheme.border),
+        side: BorderSide(
+          color: danger ? const Color(0xFFE5E7EB) : TaraTheme.border,
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
         textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
       ),
@@ -612,4 +623,3 @@ class _WebStatusAction extends StatelessWidget {
 void _showWebDashboardSnack(BuildContext context, String message) {
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
 }
-

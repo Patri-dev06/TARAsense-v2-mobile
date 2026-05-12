@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:tarasense_mobile/core/config/app_config.dart';
 import 'package:tarasense_mobile/core/network/api_error_formatter.dart';
 import 'package:tarasense_mobile/core/theme/tara_theme.dart';
@@ -568,6 +569,19 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
     return formatApiError(error, includeUri: true);
   }
 
+  void _openStudy(MsmeStudyItem study) {
+    if (study.id.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This study does not have an ID yet.')),
+      );
+      return;
+    }
+    context.push(
+      '/msme/studies/${Uri.encodeComponent(study.id)}',
+      extra: study,
+    );
+  }
+
   void _loadPreviewWorkspace() {
     final profile = _previewProfile;
     final options = _previewBuilderOptions;
@@ -637,6 +651,7 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
                     dashboard: _dashboard,
                     onRefresh: () => _loadDashboard(),
                     onRetry: () => _loadDashboard(),
+                    onOpenStudy: _openStudy,
                     onOpenCreateStudy: () =>
                         setState(() => _currentTabIndex = 1),
                   ),
@@ -826,6 +841,7 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
                     dashboard: _dashboard,
                     onRefresh: () => _loadDashboard(),
                     onRetry: () => _loadDashboard(),
+                    onOpenStudy: _openStudy,
                     onOpenCreateStudy: () =>
                         setState(() => _currentTabIndex = 1),
                   ),

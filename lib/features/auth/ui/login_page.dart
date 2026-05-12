@@ -59,11 +59,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           password: _passwordController.text.trim(),
         );
 
-    if (!mounted ||
-        ref.read(authControllerProvider).status == AuthStatus.authenticated) {
-      return;
-    }
-
+    // Success is handled by ref.listen → _completeSuccessfulLogin.
+    // Only run cleanup here when login failed and the widget is still alive.
+    if (!mounted) return;
     await _waitForMinimumLoginAnimation();
     if (mounted) {
       _hideLoginOverlay();
@@ -143,12 +141,28 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         unawaited(_completeSuccessfulLogin(next));
       } else if (next.errorMessage != null &&
           previous?.errorMessage != next.errorMessage) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(next.errorMessage!),
-            backgroundColor: Colors.red.shade700,
-          ),
-        );
+        ScaffoldMessenger.of(context)
+          ..clearSnackBars()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(
+                next.errorMessage!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  height: 1.2,
+                ),
+              ),
+              backgroundColor: const Color(0xFF1F2937),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              margin: const EdgeInsets.fromLTRB(24, 0, 24, 28),
+              duration: const Duration(seconds: 4),
+            ),
+          );
       }
     });
 

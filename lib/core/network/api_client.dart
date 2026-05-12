@@ -31,17 +31,38 @@ class ApiClient {
 
   final Dio _dio;
 
+  Future<dynamic> getData(
+    String path, {
+    String? bearerToken,
+    Map<String, dynamic>? queryParameters,
+    ValidateStatus? validateStatus,
+  }) async {
+    final response = await _dio.get<dynamic>(
+      path,
+      queryParameters: queryParameters,
+      options: _optionsForToken(bearerToken, validateStatus: validateStatus),
+    );
+    return response.data;
+  }
+
   Future<Map<String, dynamic>> getJson(
     String path, {
     String? bearerToken,
     Map<String, dynamic>? queryParameters,
   }) async {
-    final response = await _dio.get<Map<String, dynamic>>(
+    final response = await _dio.get<dynamic>(
       path,
       queryParameters: queryParameters,
       options: _optionsForToken(bearerToken),
     );
-    return response.data ?? <String, dynamic>{};
+    final data = response.data;
+    if (data == null) {
+      return <String, dynamic>{};
+    }
+    if (data is Map) {
+      return Map<String, dynamic>.from(data);
+    }
+    throw FormatException('Expected JSON object from $path.');
   }
 
   Future<Map<String, dynamic>> postJson(
@@ -89,12 +110,16 @@ class ApiClient {
     return response.data ?? <String, dynamic>{};
   }
 
-  Options _optionsForToken(String? bearerToken) {
+  Options _optionsForToken(
+    String? bearerToken, {
+    ValidateStatus? validateStatus,
+  }) {
     if (bearerToken == null || bearerToken.isEmpty) {
-      return Options();
+      return Options(validateStatus: validateStatus);
     }
     return Options(
       headers: <String, String>{'Authorization': 'Bearer $bearerToken'},
+      validateStatus: validateStatus,
     );
   }
 

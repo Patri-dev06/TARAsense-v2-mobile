@@ -3,10 +3,14 @@ part of 'tester_workspace_page.dart';
 class _ConsumerSidebar extends StatelessWidget {
   const _ConsumerSidebar({
     required this.currentView,
+    required this.studiesAsync,
+    required this.completedStudiesAsync,
     required this.onViewChanged,
   });
 
   final _ConsumerView currentView;
+  final AsyncValue<List<ConsumerStudy>> studiesAsync;
+  final AsyncValue<List<ConsumerStudy>> completedStudiesAsync;
   final ValueChanged<_ConsumerView> onViewChanged;
 
   @override
@@ -58,14 +62,14 @@ class _ConsumerSidebar extends StatelessWidget {
           _ConsumerNavButton(
             icon: Icons.explore_outlined,
             label: 'Available Surveys',
-            badge: '3',
+            badge: _studyCountLabel(studiesAsync),
             selected: currentView == _ConsumerView.availableSurveys,
             onTap: () => onViewChanged(_ConsumerView.availableSurveys),
           ),
           _ConsumerNavButton(
             icon: Icons.assignment_turned_in_outlined,
             label: 'Completed Surveys',
-            badge: '0',
+            badge: _studyCountLabel(completedStudiesAsync),
             selected: currentView == _ConsumerView.completedSurveys,
             onTap: () => onViewChanged(_ConsumerView.completedSurveys),
           ),
@@ -96,6 +100,8 @@ class _ConsumerContent extends StatelessWidget {
     required this.email,
     required this.organization,
     required this.searchController,
+    required this.studiesAsync,
+    required this.completedStudiesAsync,
     required this.msmeReasonController,
     required this.ficReasonController,
     required this.onViewChanged,
@@ -109,6 +115,8 @@ class _ConsumerContent extends StatelessWidget {
   final String email;
   final String? organization;
   final TextEditingController searchController;
+  final AsyncValue<List<ConsumerStudy>> studiesAsync;
+  final AsyncValue<List<ConsumerStudy>> completedStudiesAsync;
   final TextEditingController msmeReasonController;
   final TextEditingController ficReasonController;
   final ValueChanged<_ConsumerView> onViewChanged;
@@ -128,7 +136,10 @@ class _ConsumerContent extends StatelessWidget {
       children: <Widget>[
         _ConsumerPageHeader(userName: userName),
         const SizedBox(height: 20),
-        const _ConsumerStatsGrid(),
+        _ConsumerStatsGrid(
+          studiesAsync: studiesAsync,
+          completedStudiesAsync: completedStudiesAsync,
+        ),
         const SizedBox(height: 22),
         const Divider(height: 1),
         const SizedBox(height: 24),
@@ -148,9 +159,15 @@ class _ConsumerContent extends StatelessWidget {
           organization: organization,
         );
       case _ConsumerView.availableSurveys:
-        return _AvailableSurveysPanel(searchController: searchController);
+        return _AvailableSurveysPanel(
+          searchController: searchController,
+          studiesAsync: studiesAsync,
+        );
       case _ConsumerView.completedSurveys:
-        return const _CompletedSurveysPanel();
+        return _CompletedSurveysPanel(
+          completedStudiesAsync: completedStudiesAsync,
+          searchQuery: '',
+        );
       case _ConsumerView.roleApplications:
         return _RoleApplicationsPanel(
           msmeReasonController: msmeReasonController,
@@ -267,10 +284,7 @@ class _ConsumerSettingsFormGrid extends StatelessWidget {
 }
 
 class _ConsumerSettingsField {
-  const _ConsumerSettingsField({
-    required this.label,
-    required this.value,
-  });
+  const _ConsumerSettingsField({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -313,42 +327,13 @@ class _ConsumerPageHeader extends StatelessWidget {
 }
 
 class _ConsumerStatsGrid extends StatelessWidget {
-  const _ConsumerStatsGrid();
+  const _ConsumerStatsGrid({
+    required this.studiesAsync,
+    required this.completedStudiesAsync,
+  });
 
-  static const List<_ConsumerStat> _stats = <_ConsumerStat>[
-    _ConsumerStat(
-      icon: Icons.explore_outlined,
-      value: '3',
-      label: 'STUDY NOTIFICATIONS',
-      subtitle: 'Active studies you can join',
-      tint: Color(0xFFEAF2FF),
-      iconColor: Color(0xFF155BFF),
-    ),
-    _ConsumerStat(
-      icon: Icons.verified_user_outlined,
-      value: '0',
-      label: 'PENDING APPLICATIONS',
-      subtitle: 'Awaiting admin review',
-      tint: Color(0xFFFFF7E6),
-      iconColor: TaraTheme.primaryDark,
-    ),
-    _ConsumerStat(
-      icon: Icons.assignment_turned_in_outlined,
-      value: '0',
-      label: 'APPROVED UPGRADES',
-      subtitle: 'Role requests approved',
-      tint: Color(0xFFE7FAF3),
-      iconColor: Color(0xFF07936E),
-    ),
-    _ConsumerStat(
-      icon: Icons.description_outlined,
-      value: '0',
-      label: 'COMPLETED SURVEYS',
-      subtitle: 'Surveys you already submitted',
-      tint: Color(0xFFF0F4F8),
-      iconColor: Color(0xFF344B66),
-    ),
-  ];
+  final AsyncValue<List<ConsumerStudy>> studiesAsync;
+  final AsyncValue<List<ConsumerStudy>> completedStudiesAsync;
 
   @override
   Widget build(BuildContext context) {
@@ -365,10 +350,45 @@ class _ConsumerStatsGrid extends StatelessWidget {
             ? constraints.maxWidth
             : (constraints.maxWidth - (16 * (columns - 1))) / columns;
 
+        final List<_ConsumerStat> stats = <_ConsumerStat>[
+          _ConsumerStat(
+            icon: Icons.explore_outlined,
+            value: _studyCountLabel(studiesAsync),
+            label: 'STUDY NOTIFICATIONS',
+            subtitle: 'Active studies you can join',
+            tint: const Color(0xFFEAF2FF),
+            iconColor: const Color(0xFF155BFF),
+          ),
+          const _ConsumerStat(
+            icon: Icons.verified_user_outlined,
+            value: '0',
+            label: 'PENDING APPLICATIONS',
+            subtitle: 'Awaiting admin review',
+            tint: Color(0xFFFFF7E6),
+            iconColor: TaraTheme.primaryDark,
+          ),
+          const _ConsumerStat(
+            icon: Icons.assignment_turned_in_outlined,
+            value: '0',
+            label: 'APPROVED UPGRADES',
+            subtitle: 'Role requests approved',
+            tint: Color(0xFFE7FAF3),
+            iconColor: Color(0xFF07936E),
+          ),
+          _ConsumerStat(
+            icon: Icons.description_outlined,
+            value: _studyCountLabel(completedStudiesAsync),
+            label: 'COMPLETED SURVEYS',
+            subtitle: 'Surveys you already submitted',
+            tint: const Color(0xFFF0F4F8),
+            iconColor: const Color(0xFF344B66),
+          ),
+        ];
+
         return Wrap(
           spacing: 16,
           runSpacing: 16,
-          children: _stats
+          children: stats
               .map((stat) => _ConsumerStatCard(stat: stat, width: cardWidth))
               .toList(),
         );
@@ -376,4 +396,3 @@ class _ConsumerStatsGrid extends StatelessWidget {
     );
   }
 }
-
