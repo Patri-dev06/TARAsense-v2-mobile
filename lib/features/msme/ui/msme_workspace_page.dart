@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import 'package:tarasense_mobile/core/config/app_config.dart';
 import 'package:tarasense_mobile/core/network/api_error_formatter.dart';
 import 'package:tarasense_mobile/core/theme/tara_theme.dart';
-import 'package:tarasense_mobile/core/widgets/dost_logo_mark.dart';
 import 'package:tarasense_mobile/core/widgets/tara_brand_lockup.dart';
 import 'package:tarasense_mobile/features/auth/state/auth_providers.dart';
 import 'package:tarasense_mobile/features/auth/ui/auth_loading_dialog.dart';
@@ -52,16 +51,19 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
   bool _isLoadingDashboard = true;
   bool _isLoadingProfile = true;
   bool _isLoadingBuilder = true;
+  bool _isLoadingEvaluate = true;
   bool _isSavingProfile = false;
   bool _isCreatingStudy = false;
 
   String? _dashboardError;
   String? _profileError;
   String? _builderError;
+  String? _evaluateError;
 
   MsmeDashboardData? _dashboard;
   MsmeProfileData? _profile;
   StudyBuilderOptionsData? _builderOptions;
+  List<EvaluatePeerStudyItem> _evaluateStudies = <EvaluatePeerStudyItem>[];
 
   String _searchQuery = '';
   String _studyMode = 'SENSORY';
@@ -119,6 +121,7 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
       _loadDashboard(),
       _loadProfile(),
       _loadBuilderOptions(),
+      _loadEvaluateStudies(),
     ]);
   }
 
@@ -192,10 +195,11 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
     });
 
     try {
-      final profile = await ref.read(msmeApiProvider).fetchProfile(accessToken);
+      final rawProfile = await ref.read(msmeApiProvider).fetchProfile(accessToken);
       if (!mounted) {
         return;
       }
+      final profile = _enrichProfile(rawProfile);
       _hydrateProfileForm(profile);
       setState(() => _profile = profile);
     } catch (error) {
@@ -208,6 +212,61 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
         setState(() => _isLoadingProfile = false);
       }
     }
+  }
+
+  MsmeProfileData _enrichProfile(MsmeProfileData raw) {
+    final user = ref.read(authControllerProvider).session?.user;
+    return MsmeProfileData(
+      eyebrow: raw.eyebrow,
+      title: raw.title,
+      subtitle: raw.subtitle,
+      name: raw.name.trim().isNotEmpty ? raw.name : (user?.name ?? ''),
+      email: raw.email.trim().isNotEmpty ? raw.email : (user?.email ?? ''),
+      organization: raw.organization.trim().isNotEmpty
+          ? raw.organization
+          : (user?.organization ?? ''),
+      age: raw.age,
+      gender: raw.gender,
+      location: raw.location,
+      occupation: raw.occupation,
+      lifestyle: raw.lifestyle,
+      dietaryPrefs: raw.dietaryPrefs,
+      coffeeDrinker: raw.coffeeDrinker,
+      snackConsumer: raw.snackConsumer,
+      energyDrinkConsumer: raw.energyDrinkConsumer,
+      history: raw.history,
+      metadata: ProfileMetadata(
+        role: raw.metadata.role.trim().isNotEmpty
+            ? raw.metadata.role
+            : (user?.role ?? ''),
+        joinedAt: raw.metadata.joinedAt,
+        panelistCreatedAt: raw.metadata.panelistCreatedAt,
+        lastActive: raw.metadata.lastActive,
+      ),
+      genderOptions: raw.genderOptions.isNotEmpty
+          ? raw.genderOptions
+          : const <SelectOption>[
+              SelectOption(value: 'FEMALE', label: 'Female'),
+              SelectOption(value: 'MALE', label: 'Male'),
+              SelectOption(value: 'PREFER_NOT_SAY', label: 'Prefer not to say'),
+            ],
+      lifestyleOptions: raw.lifestyleOptions.isNotEmpty
+          ? raw.lifestyleOptions
+          : const <SelectOption>[
+              SelectOption(value: 'BUSY_PROFESSIONAL', label: 'Busy professional'),
+              SelectOption(value: 'HEALTH_CONSCIOUS', label: 'Health conscious'),
+              SelectOption(value: 'FOOD_ADVENTUROUS', label: 'Food adventurous'),
+              SelectOption(value: 'BUDGET_MINDED', label: 'Budget-minded'),
+            ],
+      dietaryOptions: raw.dietaryOptions.isNotEmpty
+          ? raw.dietaryOptions
+          : const <SelectOption>[
+              SelectOption(value: 'LOW_SUGAR', label: 'Low sugar'),
+              SelectOption(value: 'LOW_SODIUM', label: 'Low sodium'),
+              SelectOption(value: 'VEGETARIAN', label: 'Vegetarian'),
+              SelectOption(value: 'NO_RESTRICTIONS', label: 'No restrictions'),
+            ],
+    );
   }
 
   Future<void> _loadBuilderOptions() async {
@@ -253,13 +312,46 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
     }
   }
 
+  Future<void> _loadEvaluateStudies() async {
+    if (AppConfig.uiPreviewMode) {
+      setState(() {
+        _evaluateStudies = List<EvaluatePeerStudyItem>.from(
+          _previewEvaluateStudies,
+        );
+        _evaluateError = null;
+        _isLoadingEvaluate = false;
+      });
+      return;
+    }
+    setState(() {
+      _isLoadingEvaluate = true;
+      _evaluateError = null;
+    });
+    await Future<void>.delayed(Duration.zero);
+    if (!mounted) return;
+    setState(() {
+      _evaluateStudies = <EvaluatePeerStudyItem>[];
+      _isLoadingEvaluate = false;
+    });
+  }
+
+  void _openEvaluateStudy(EvaluatePeerStudyItem study) {
+    if (study.id.trim().isEmpty) return;
+    context.push(
+      '/studies/${Uri.encodeComponent(study.id)}/start',
+      extra: study,
+    );
+  }
+
   void _hydrateProfileForm(MsmeProfileData profile) {
     _profileNameController.text = profile.name;
     _profileOrganizationController.text = profile.organization;
     _profileAgeController.text = profile.age.toString();
     _profileLocationController.text = profile.location;
     _profileOccupationController.text = profile.occupation;
-    _selectedGender = profile.gender;
+    _selectedGender = profile.gender.trim().isEmpty
+        ? 'PREFER_NOT_SAY'
+        : profile.gender;
     _selectedLifestyle
       ..clear()
       ..addAll(profile.lifestyle);
@@ -326,7 +418,7 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
     setState(() => _isSavingProfile = true);
 
     try {
-      final profile = await ref
+      final rawProfile = await ref
           .read(msmeApiProvider)
           .updateProfile(
             accessToken,
@@ -350,7 +442,7 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
       }
 
       setState(() {
-        _profile = profile;
+        _profile = _enrichProfile(rawProfile);
         _profileError = null;
       });
       await ref.read(authControllerProvider.notifier).refreshProfile();
@@ -591,12 +683,17 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
       _dashboard = _previewDashboard;
       _profile = profile;
       _builderOptions = options;
+      _evaluateStudies = List<EvaluatePeerStudyItem>.from(
+        _previewEvaluateStudies,
+      );
       _dashboardError = null;
       _profileError = null;
       _builderError = null;
+      _evaluateError = null;
       _isLoadingDashboard = false;
       _isLoadingProfile = false;
       _isLoadingBuilder = false;
+      _isLoadingEvaluate = false;
     });
   }
 
@@ -638,13 +735,22 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
     }
 
     return Scaffold(
+      backgroundColor: TaraTheme.background,
+      bottomNavigationBar: _MsmePortalNavBar(
+        currentTabIndex: _currentTabIndex,
+        onDashboard: () => setState(() => _currentTabIndex = 0),
+        onCreateStudy: () => setState(() => _currentTabIndex = 1),
+        onHistory: () => setState(() => _currentTabIndex = 3),
+        onEvaluate: () => setState(() => _currentTabIndex = 4),
+        onProfile: () => setState(() => _currentTabIndex = 2),
+        evaluateCount: _evaluateStudies.length,
+        historyCount: _dashboard?.studies.length ?? 0,
+      ),
       body: SafeArea(
-        child: Column(
-          children: <Widget>[
-            Expanded(
-              child: IndexedStack(
-                index: _currentTabIndex,
-                children: <Widget>[
+        bottom: false,
+        child: IndexedStack(
+        index: _currentTabIndex,
+        children: <Widget>[
                   _DashboardTab(
                     isLoading: _isLoadingDashboard,
                     error: _dashboardError,
@@ -845,19 +951,17 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
                     onOpenCreateStudy: () =>
                         setState(() => _currentTabIndex = 1),
                   ),
+                  _EvaluateStudiesTab(
+                    isLoading: _isLoadingEvaluate,
+                    error: _evaluateError,
+                    studies: _evaluateStudies,
+                    onRefresh: _loadEvaluateStudies,
+                    onRetry: () => unawaited(_loadEvaluateStudies()),
+                    onStartEvaluation: _openEvaluateStudy,
+                  ),
+                  const _ImportDatasetTab(),
                 ],
               ),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: _MsmePortalNavBar(
-        currentTabIndex: _currentTabIndex,
-        onStudies: () => setState(() => _currentTabIndex = 0),
-        onResults: () => setState(() => _currentTabIndex = 3),
-        onNew: () => setState(() => _currentTabIndex = 1),
-        onFic: () => setState(() => _currentTabIndex = 1),
-        onProfile: () => setState(() => _currentTabIndex = 2),
       ),
     );
   }

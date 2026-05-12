@@ -54,6 +54,48 @@ const MsmeDashboardData _previewDashboard = MsmeDashboardData(
   ],
 );
 
+const List<EvaluatePeerStudyItem> _previewEvaluateStudies = <EvaluatePeerStudyItem>[
+  EvaluatePeerStudyItem(
+    id: 'eval-preview-1',
+    title: 'Coconut Water Preference Study',
+    productName: 'Pure Coco Refresh',
+    creatorName: 'Maria Santos',
+    creatorOrganization: 'Santos Natural Foods',
+    category: 'Beverage',
+    stage: 'Market Readiness',
+    status: 'RECRUITING',
+    sampleSize: 50,
+    responseCount: 12,
+    hasStarted: false,
+  ),
+  EvaluatePeerStudyItem(
+    id: 'eval-preview-2',
+    title: 'Banana Chips Texture Evaluation',
+    productName: 'Crunch Bana',
+    creatorName: 'Jose Reyes',
+    creatorOrganization: 'Reyes Snack Co.',
+    category: 'Snack',
+    stage: 'Refinement',
+    status: 'ACTIVE',
+    sampleSize: 40,
+    responseCount: 28,
+    hasStarted: true,
+  ),
+  EvaluatePeerStudyItem(
+    id: 'eval-preview-3',
+    title: 'Turmeric Latte Consumer Test',
+    productName: 'Golden Latte Mix',
+    creatorName: 'Ana Cruz',
+    creatorOrganization: 'Cruz Wellness Co.',
+    category: 'Functional Food',
+    stage: 'Prototype Check',
+    status: 'RECRUITING',
+    sampleSize: 60,
+    responseCount: 5,
+    hasStarted: false,
+  ),
+];
+
 final MsmeProfileData _previewProfile = MsmeProfileData(
   eyebrow: 'UI Preview',
   title: 'My Profile',
@@ -353,19 +395,6 @@ String _formatLongDate(DateTime value) {
 
 String _formatShortDate(DateTime value) {
   return '${value.month}/${value.day}/${value.year}';
-}
-
-String _formatWeekday(DateTime value) {
-  const List<String> weekdays = <String>[
-    'Mon',
-    'Tue',
-    'Wed',
-    'Thu',
-    'Fri',
-    'Sat',
-    'Sun',
-  ];
-  return weekdays[value.weekday - 1];
 }
 
 String _formatLongDateTime(DateTime value) {

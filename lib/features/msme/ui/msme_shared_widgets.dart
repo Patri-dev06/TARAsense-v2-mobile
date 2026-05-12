@@ -1,134 +1,93 @@
 part of 'msme_workspace_page.dart';
 
-class _HeroWorkspaceCard extends StatelessWidget {
-  const _HeroWorkspaceCard({
+class _MsmePageHeader extends StatelessWidget {
+  const _MsmePageHeader({
+    required this.label,
     required this.title,
     required this.subtitle,
-    required this.actionLabel,
-    required this.onAction,
+    required this.icon,
   });
 
+  final String label;
   final String title;
   final String subtitle;
-  final String actionLabel;
-  final VoidCallback? onAction;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
       decoration: BoxDecoration(
-        color: TaraTheme.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: TaraTheme.border),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[Color(0xFFFB923C), TaraTheme.primaryDark],
+        ),
+        borderRadius: BorderRadius.circular(14),
         boxShadow: const <BoxShadow>[
           BoxShadow(
-            color: Color(0x120057A8),
-            blurRadius: 28,
-            offset: Offset(0, 14),
+            color: Color(0x28F97316),
+            blurRadius: 14,
+            offset: Offset(0, 5),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: <Widget>[
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              const DostLogoMark(size: 48),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    const TaraBrandLockup(markSize: 20, textSize: 22),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Sensory and consumer driven food innovation platform',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: TaraTheme.textPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
+          Container(
+            height: 40,
+            width: 40,
+            decoration: BoxDecoration(
+              color: const Color(0x33FFFFFF),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0x44FFFFFF)),
+            ),
+            child: Icon(icon, color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: Color(0xCCFFFFFF),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    height: 1,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          Text(
-            'Test. Analyze. Refine. Advance.',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: TaraTheme.textPrimary,
-              height: 1.08,
-              letterSpacing: 0,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: TaraTheme.dostBlue,
-              letterSpacing: 0,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: const TextStyle(
-              color: TaraTheme.textSecondary,
-              height: 1.5,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 18),
-          const Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: <Widget>[
-              _HeroSignalPill(label: 'Food Innovation Centers'),
-              _HeroSignalPill(label: 'MSME studies'),
-              _HeroSignalPill(label: 'Consumer feedback'),
-            ],
-          ),
-          const SizedBox(height: 18),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: onAction,
-              style: FilledButton.styleFrom(
-                backgroundColor: TaraTheme.primary,
-                foregroundColor: Colors.white,
-              ),
-              child: Text(actionLabel),
+                const SizedBox(height: 3),
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    height: 1.1,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                if (subtitle.trim().isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xB3FFFFFF),
+                      fontSize: 11,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _HeroSignalPill extends StatelessWidget {
-  const _HeroSignalPill({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: TaraTheme.primaryTint,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: TaraTheme.primarySoft),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: TaraTheme.dostBlueDark,
-          fontWeight: FontWeight.w800,
-        ),
       ),
     );
   }
@@ -235,7 +194,10 @@ class _AttributeEditor extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
-            initialValue: attribute.dimension,
+            key: ValueKey('${attribute.name}_${attribute.dimension}'),
+            initialValue: dimensionOptions.contains(attribute.dimension)
+                ? attribute.dimension
+                : (dimensionOptions.isNotEmpty ? dimensionOptions.first : null),
             items: dimensionOptions
                 .map(
                   (String value) => DropdownMenuItem<String>(
@@ -266,7 +228,7 @@ class _AttributeEditor extends StatelessWidget {
   }
 }
 
-class _MobileFacilityCalendar extends StatelessWidget {
+class _MobileFacilityCalendar extends StatefulWidget {
   const _MobileFacilityCalendar({
     required this.startDate,
     required this.durationDays,
@@ -282,29 +244,70 @@ class _MobileFacilityCalendar extends StatelessWidget {
   final ValueChanged<DateTime> onDateSelected;
 
   @override
+  State<_MobileFacilityCalendar> createState() =>
+      _MobileFacilityCalendarState();
+}
+
+class _MobileFacilityCalendarState extends State<_MobileFacilityCalendar> {
+  late DateTime _displayedMonth;
+
+  @override
+  void initState() {
+    super.initState();
+    _displayedMonth = DateTime(widget.startDate.year, widget.startDate.month);
+  }
+
+  @override
+  void didUpdateWidget(_MobileFacilityCalendar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final DateTime newMonth = DateTime(
+      widget.startDate.year,
+      widget.startDate.month,
+    );
+    if (newMonth != _displayedMonth) {
+      setState(() => _displayedMonth = newMonth);
+    }
+  }
+
+  void _prevMonth() => setState(
+    () => _displayedMonth = DateTime(
+      _displayedMonth.year,
+      _displayedMonth.month - 1,
+    ),
+  );
+
+  void _nextMonth() => setState(
+    () => _displayedMonth = DateTime(
+      _displayedMonth.year,
+      _displayedMonth.month + 1,
+    ),
+  );
+
+  @override
   Widget build(BuildContext context) {
-    final int safeDuration = durationDays < 1 ? 1 : durationDays;
     final DateTime today = DateTime.now();
-    final DateTime firstDate = DateTime(today.year, today.month, today.day);
-    final DateTime selectedDate = DateTime(
-      startDate.year,
-      startDate.month,
-      startDate.day,
+    final DateTime todayNorm = DateTime(today.year, today.month, today.day);
+    final DateTime startNorm = DateTime(
+      widget.startDate.year,
+      widget.startDate.month,
+      widget.startDate.day,
     );
-    final DateTime rangeStart = selectedDate.isBefore(firstDate)
-        ? selectedDate
-        : firstDate;
-    final List<DateTime> visibleDates = List<DateTime>.generate(
-      14,
-      (int index) => rangeStart.add(Duration(days: index)),
-    );
-    final int totalCapacity = sessions.fold<int>(
-      0,
-      (int total, _SessionDraft session) => total + session.capacity,
-    );
-    final String facilityName = selectedFacility?.trim().isEmpty ?? true
+    final int safeDuration = widget.durationDays.clamp(1, 365);
+    final int daysInMonth =
+        DateTime(_displayedMonth.year, _displayedMonth.month + 1, 0).day;
+    final int firstWeekday =
+        DateTime(_displayedMonth.year, _displayedMonth.month, 1).weekday;
+    final int startOffset = firstWeekday - 1;
+    final int rows = ((startOffset + daysInMonth) / 7).ceil();
+
+    final String facilityName =
+        widget.selectedFacility?.trim().isEmpty ?? true
         ? 'No facility selected'
-        : selectedFacility!;
+        : widget.selectedFacility!;
+    final int totalCapacity = widget.sessions.fold<int>(
+      0,
+      (int total, _SessionDraft s) => total + s.capacity,
+    );
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -342,6 +345,8 @@ class _MobileFacilityCalendar extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       facilityName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
@@ -349,36 +354,95 @@ class _MobileFacilityCalendar extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: visibleDates.map((DateTime date) {
-                final int dayOffset = date.difference(selectedDate).inDays;
-                final bool selected = dayOffset >= 0 && dayOffset < safeDuration;
-                final bool past = date.isBefore(firstDate);
-                final bool hasSessions = sessions.any(
-                  (_SessionDraft session) => session.dayOffset == dayOffset,
-                );
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: _CalendarDateChip(
-                    date: date,
-                    selected: selected,
-                    disabled: past,
-                    hasSessions: hasSessions,
-                    onTap: past ? null : () => onDateSelected(date),
+          const SizedBox(height: 12),
+          Row(
+            children: <Widget>[
+              _CalendarNavButton(
+                icon: Icons.chevron_left_rounded,
+                onTap: _prevMonth,
+              ),
+              Expanded(
+                child: Text(
+                  _monthYearLabel(_displayedMonth),
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF061A3A),
                   ),
-                );
-              }).toList(),
-            ),
+                ),
+              ),
+              _CalendarNavButton(
+                icon: Icons.chevron_right_rounded,
+                onTap: _nextMonth,
+              ),
+            ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 8),
+          Row(
+            children: <String>['M', 'T', 'W', 'T', 'F', 'S', 'S']
+                .map(
+                  (String d) => Expanded(
+                    child: Text(
+                      d,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Color(0xFF52657D),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        height: 1,
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+          const SizedBox(height: 6),
+          ...List<Widget>.generate(rows, (int rowIndex) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                children: List<Widget>.generate(7, (int colIndex) {
+                  final int day = rowIndex * 7 + colIndex - startOffset + 1;
+                  if (day < 1 || day > daysInMonth) {
+                    return const Expanded(child: SizedBox());
+                  }
+                  final DateTime cellDate = DateTime(
+                    _displayedMonth.year,
+                    _displayedMonth.month,
+                    day,
+                  );
+                  final bool isPast = cellDate.isBefore(todayNorm);
+                  final bool isToday = cellDate == todayNorm;
+                  final int dayOffset = cellDate.difference(startNorm).inDays;
+                  final bool inRange =
+                      dayOffset >= 0 && dayOffset < safeDuration;
+                  final bool isStart = dayOffset == 0;
+                  final bool hasSessions = widget.sessions.any(
+                    (_SessionDraft s) => s.dayOffset == dayOffset,
+                  );
+                  return Expanded(
+                    child: _CalendarCell(
+                      day: day,
+                      isPast: isPast,
+                      isToday: isToday,
+                      inRange: inRange,
+                      isStart: isStart,
+                      hasSessions: hasSessions,
+                      onTap: isPast
+                          ? null
+                          : () => widget.onDateSelected(cellDate),
+                    ),
+                  );
+                }),
+              ),
+            );
+          }),
+          const SizedBox(height: 10),
           Row(
             children: <Widget>[
               Expanded(
                 child: _CalendarMetric(
-                  label: 'Selected',
+                  label: 'Duration',
                   value: '$safeDuration day${safeDuration == 1 ? '' : 's'}',
                   icon: Icons.event_available_outlined,
                 ),
@@ -393,22 +457,22 @@ class _MobileFacilityCalendar extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: 10,
+            runSpacing: 6,
             children: <Widget>[
               _CalendarLegendDot(
-                label: 'Testing date',
+                label: 'Start date',
                 color: TaraTheme.primary,
               ),
-              const _CalendarLegendDot(
-                label: 'Has session',
-                color: TaraTheme.dostBlue,
-              ),
               _CalendarLegendDot(
-                label: 'Unavailable',
-                color: TaraTheme.textSecondary.withValues(alpha: 0.38),
+                label: 'Selected range',
+                color: TaraTheme.primarySoft,
+              ),
+              const _CalendarLegendDot(
+                label: 'Session',
+                color: TaraTheme.dostBlue,
               ),
             ],
           ),
@@ -416,73 +480,121 @@ class _MobileFacilityCalendar extends StatelessWidget {
       ),
     );
   }
+
+  static String _monthYearLabel(DateTime date) {
+    const List<String> months = <String>[
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ];
+    return '${months[date.month - 1]} ${date.year}';
+  }
 }
 
-class _CalendarDateChip extends StatelessWidget {
-  const _CalendarDateChip({
-    required this.date,
-    required this.selected,
-    required this.disabled,
+class _CalendarNavButton extends StatelessWidget {
+  const _CalendarNavButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: TaraTheme.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: TaraTheme.border),
+        ),
+        child: Icon(icon, size: 18, color: TaraTheme.textSecondary),
+      ),
+    );
+  }
+}
+
+class _CalendarCell extends StatelessWidget {
+  const _CalendarCell({
+    required this.day,
+    required this.isPast,
+    required this.isToday,
+    required this.inRange,
+    required this.isStart,
     required this.hasSessions,
     required this.onTap,
   });
 
-  final DateTime date;
-  final bool selected;
-  final bool disabled;
+  final int day;
+  final bool isPast;
+  final bool isToday;
+  final bool inRange;
+  final bool isStart;
   final bool hasSessions;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final Color borderColor = selected ? TaraTheme.primary : TaraTheme.border;
-    final Color textColor = disabled
-        ? TaraTheme.textSecondary.withValues(alpha: 0.55)
-        : selected
-        ? TaraTheme.primaryDark
-        : TaraTheme.textPrimary;
+    final Color textColor;
+    final Color? bgColor;
+    final Border? border;
 
-    return InkWell(
+    if (isPast) {
+      textColor = TaraTheme.textSecondary.withValues(alpha: 0.35);
+      bgColor = null;
+      border = null;
+    } else if (isStart) {
+      textColor = Colors.white;
+      bgColor = TaraTheme.primary;
+      border = null;
+    } else if (inRange) {
+      textColor = TaraTheme.primaryDark;
+      bgColor = TaraTheme.primarySoft;
+      border = null;
+    } else if (isToday) {
+      textColor = TaraTheme.primary;
+      bgColor = null;
+      border = Border.all(color: TaraTheme.primary, width: 1.5);
+    } else {
+      textColor = const Color(0xFF061A3A);
+      bgColor = null;
+      border = null;
+    }
+
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
       child: Container(
-        width: 74,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+        height: 36,
         decoration: BoxDecoration(
-          color: disabled
-              ? TaraTheme.background
-              : selected
-              ? TaraTheme.primaryTint
-              : TaraTheme.surface,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: borderColor, width: selected ? 1.5 : 1),
+          color: bgColor,
+          borderRadius: BorderRadius.circular(8),
+          border: border,
         ),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             Text(
-              _formatWeekday(date),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              day.toString(),
+              style: TextStyle(
                 color: textColor,
-                fontWeight: FontWeight.w700,
+                fontSize: 13,
+                fontWeight:
+                    isStart || inRange ? FontWeight.w800 : FontWeight.w500,
+                height: 1,
               ),
             ),
-            const SizedBox(height: 6),
-            Text(
-              date.day.toString(),
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: textColor,
-                fontSize: 22,
+            if (hasSessions) ...<Widget>[
+              const SizedBox(height: 2),
+              Container(
+                height: 4,
+                width: 4,
+                decoration: const BoxDecoration(
+                  color: TaraTheme.dostBlue,
+                  shape: BoxShape.circle,
+                ),
               ),
-            ),
-            const SizedBox(height: 6),
-            Container(
-              height: 6,
-              width: 6,
-              decoration: BoxDecoration(
-                color: hasSessions ? TaraTheme.dostBlue : Colors.transparent,
-                shape: BoxShape.circle,
-              ),
-            ),
+            ],
           ],
         ),
       ),

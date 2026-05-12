@@ -3,90 +3,72 @@ part of 'msme_workspace_page.dart';
 class _MsmePortalNavBar extends StatelessWidget {
   const _MsmePortalNavBar({
     required this.currentTabIndex,
-    required this.onStudies,
-    required this.onResults,
-    required this.onNew,
-    required this.onFic,
+    required this.onDashboard,
+    required this.onCreateStudy,
+    required this.onHistory,
+    required this.onEvaluate,
     required this.onProfile,
+    required this.evaluateCount,
+    required this.historyCount,
   });
 
   final int currentTabIndex;
-  final VoidCallback onStudies;
-  final VoidCallback onResults;
-  final VoidCallback onNew;
-  final VoidCallback onFic;
+  final VoidCallback onDashboard;
+  final VoidCallback onCreateStudy;
+  final VoidCallback onHistory;
+  final VoidCallback onEvaluate;
   final VoidCallback onProfile;
+  final int evaluateCount;
+  final int historyCount;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 60,
+    return DecoratedBox(
       decoration: const BoxDecoration(
         color: TaraTheme.surface,
         border: Border(top: BorderSide(color: TaraTheme.border)),
       ),
       child: SafeArea(
         top: false,
-        child: Row(
-          children: <Widget>[
-            Expanded(
-              child: _PortalNavItem(
-                icon: Icons.grid_view_rounded,
-                label: 'Studies',
+        child: SizedBox(
+          height: 62,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              _PortalNavItem(
+                icon: Icons.dashboard_rounded,
+                label: 'Dashboard',
                 selected: currentTabIndex == 0,
-                onTap: onStudies,
+                onTap: onDashboard,
               ),
-            ),
-            Expanded(
-              child: _PortalNavItem(
-                icon: Icons.done_rounded,
+              _PortalNavItem(
+                icon: Icons.assignment_rounded,
                 label: 'History',
                 selected: currentTabIndex == 3,
-                onTap: onResults,
+                badge: historyCount,
+                onTap: onHistory,
               ),
-            ),
-            Expanded(
-              child: Center(
-                child: Transform.translate(
-                  offset: const Offset(0, -14),
-                  child: Material(
-                    color: TaraTheme.primary,
-                    shape: const CircleBorder(),
-                    elevation: 3,
-                    child: InkWell(
-                      onTap: onNew,
-                      customBorder: const CircleBorder(),
-                      child: const SizedBox(
-                        height: 42,
-                        width: 42,
-                        child: Icon(
-                          Icons.add_rounded,
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Expanded(
-              child: _PortalNavItem(
-                icon: Icons.format_align_center_rounded,
-                label: 'FIC',
+              _PortalNavItem(
+                icon: Icons.add_circle_rounded,
+                label: 'Create',
                 selected: currentTabIndex == 1,
-                onTap: onFic,
+                onTap: onCreateStudy,
               ),
-            ),
-            Expanded(
-              child: _PortalNavItem(
-                icon: Icons.person_outline_rounded,
+              _PortalNavItem(
+                icon: Icons.compass_calibration_rounded,
+                label: 'Evaluate',
+                selected: currentTabIndex == 4,
+                badge: evaluateCount,
+                onTap: onEvaluate,
+              ),
+              _PortalNavItem(
+                icon: Icons.person_rounded,
                 label: 'Profile',
                 selected: currentTabIndex == 2,
                 onTap: onProfile,
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -99,38 +81,74 @@ class _PortalNavItem extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    this.badge,
   });
 
   final IconData icon;
   final String label;
   final bool selected;
   final VoidCallback onTap;
+  final int? badge;
 
   @override
   Widget build(BuildContext context) {
-    final Color color = selected ? TaraTheme.primary : TaraTheme.textSecondary;
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.only(top: 6),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(icon, color: color, size: 18),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: color,
-                fontSize: 8,
-                height: 1,
-                fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
+    final Color color =
+        selected ? TaraTheme.primary : TaraTheme.textSecondary;
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Stack(
+                clipBehavior: Clip.none,
+                children: <Widget>[
+                  Icon(icon, color: color, size: 20),
+                  if (badge != null && badge! > 0)
+                    Positioned(
+                      top: -5,
+                      right: -8,
+                      child: Container(
+                        height: 14,
+                        constraints: const BoxConstraints(minWidth: 14),
+                        padding: const EdgeInsets.symmetric(horizontal: 3),
+                        decoration: BoxDecoration(
+                          color: TaraTheme.primary,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Center(
+                          child: Text(
+                            badge.toString(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 8,
+                              fontWeight: FontWeight.w800,
+                              height: 1,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
-            ),
-          ],
+              const SizedBox(height: 3),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 9,
+                  fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
+                  height: 1,
+                ),
+              ),
+              const SizedBox(height: 4),
+            ],
+          ),
         ),
       ),
     );
   }
 }
-

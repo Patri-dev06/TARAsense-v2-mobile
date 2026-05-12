@@ -321,14 +321,11 @@ class _ConsumerStudyListItem extends StatelessWidget {
 
     return InkWell(
       onTap: study.id.trim().isEmpty ? null : openStudy,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(compact ? 16 : 8),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          compact ? 8 : 10,
-          compact ? 9 : 10,
-          compact ? 8 : 10,
-          compact ? 9 : 10,
-        ),
+        padding: compact
+            ? EdgeInsets.zero
+            : const EdgeInsets.all(10),
         child: compact
             ? _ConsumerStudyMobileRow(study: study, onOpen: openStudy)
             : _ConsumerStudyDesktopRow(study: study, onOpen: openStudy),
@@ -363,6 +360,17 @@ class _CompletedStudyList extends StatelessWidget {
             message: 'Completed studies will appear here after submission.',
           );
         }
+        if (compact) {
+          return Column(
+            children: visibleStudies.asMap().entries.map((entry) {
+              final bool isLast = entry.key == visibleStudies.length - 1;
+              return Padding(
+                padding: EdgeInsets.only(bottom: isLast ? 0 : 10),
+                child: _CompletedStudyMobileCard(study: entry.value),
+              );
+            }).toList(),
+          );
+        }
         return _ConsumerStudyListShell(
           compact: compact,
           children: visibleStudies.asMap().entries.map((entry) {
@@ -395,6 +403,50 @@ class _CompletedStudyList extends StatelessWidget {
   }
 }
 
+class _CompletedStudyMobileCard extends StatelessWidget {
+  const _CompletedStudyMobileCard({required this.study});
+
+  final ConsumerStudy study;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: TaraTheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: const <BoxShadow>[
+            BoxShadow(
+              color: Color(0x0A0F9470),
+              blurRadius: 20,
+              offset: Offset(0, 8),
+            ),
+            BoxShadow(
+              color: Color(0x060F172A),
+              blurRadius: 4,
+              offset: Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Column(
+          children: <Widget>[
+            Container(
+              height: 4,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: <Color>[Color(0xFF2DD4BF), Color(0xFF0F766E)],
+                ),
+              ),
+            ),
+            _CompletedStudyListItem(study: study, compact: true),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _CompletedStudyListItem extends StatelessWidget {
   const _CompletedStudyListItem({required this.study, required this.compact});
 
@@ -414,19 +466,111 @@ class _CompletedStudyListItem extends StatelessWidget {
         ? 'Completed'
         : 'Panelist #${participation.panelistNumber}';
 
+    if (compact) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          // Title + tags
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  study.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.titleSmall?.copyWith(
+                    color: TaraTheme.textPrimary,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.2,
+                    height: 1.15,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 7),
+                Wrap(
+                  spacing: 4,
+                  runSpacing: 4,
+                  children: <Widget>[
+                    _StudyMiniTag(label: study.category),
+                    if (study.stage.trim().isNotEmpty && study.stage != '-')
+                      _StudyMiniTag(label: study.stage, subdued: true),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          // Completion date band
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              decoration: BoxDecoration(
+                color: TaraTheme.mint,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFF99F6E4)),
+              ),
+              child: Row(
+                children: <Widget>[
+                  const Icon(
+                    Icons.check_circle_outline_rounded,
+                    size: 13,
+                    color: TaraTheme.mintText,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      completedLabel,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: TaraTheme.mintText,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        height: 1.2,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Panelist meta
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: _StudyMetaLine(
+              icon: Icons.person_outline_rounded,
+              label: participantLabel,
+              color: TaraTheme.textSecondary,
+              compact: true,
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1, thickness: 1, color: Color(0xFFD1FAF0)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
+            child: Row(
+              children: <Widget>[
+                _CompletedBadge(compact: true),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Desktop layout
     return Padding(
-      padding: EdgeInsets.fromLTRB(
-        compact ? 9 : 12,
-        compact ? 10 : 12,
-        compact ? 9 : 12,
-        compact ? 10 : 12,
-      ),
+      padding: const EdgeInsets.all(12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Container(
-            height: compact ? 38 : 42,
-            width: compact ? 38 : 42,
+            height: 42,
+            width: 42,
             decoration: BoxDecoration(
               color: TaraTheme.mint,
               borderRadius: BorderRadius.circular(8),
@@ -445,7 +589,7 @@ class _CompletedStudyListItem extends StatelessWidget {
               children: <Widget>[
                 Text(
                   study.title,
-                  maxLines: compact ? 2 : 1,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: textTheme.titleSmall?.copyWith(
                     color: TaraTheme.textPrimary,
@@ -459,14 +603,14 @@ class _CompletedStudyListItem extends StatelessWidget {
                   icon: Icons.check_circle_outline_rounded,
                   label: completedLabel,
                   color: TaraTheme.mintText,
-                  compact: compact,
+                  compact: false,
                 ),
                 const SizedBox(height: 4),
                 _StudyMetaLine(
                   icon: Icons.person_outline_rounded,
                   label: participantLabel,
                   color: TaraTheme.textSecondary,
-                  compact: compact,
+                  compact: false,
                 ),
                 const SizedBox(height: 7),
                 Wrap(
@@ -476,7 +620,7 @@ class _CompletedStudyListItem extends StatelessWidget {
                     _StudyMiniTag(label: study.category),
                     if (study.stage.trim().isNotEmpty && study.stage != '-')
                       _StudyMiniTag(label: study.stage, subdued: true),
-                    _CompletedBadge(compact: compact),
+                    _CompletedBadge(compact: false),
                   ],
                 ),
               ],
@@ -500,92 +644,120 @@ class _ConsumerStudyMobileRow extends StatelessWidget {
     final String dateLabel = _sessionSegment(study.session, 0);
     final String locationLabel = _sessionSegment(study.session, 1);
     final String timeLabel = _sessionSegment(study.session, 2);
+    final bool isAvailable = _studyStatusIsAvailable(study.status);
 
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Container(
-          height: 54,
-          width: 3,
-          decoration: BoxDecoration(
-            color: TaraTheme.primary,
-            borderRadius: BorderRadius.circular(999),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Container(
-          height: 34,
-          width: 34,
-          decoration: BoxDecoration(
-            color: TaraTheme.primary,
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: const <BoxShadow>[
-              BoxShadow(
-                color: Color(0x24F97316),
-                blurRadius: 10,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-          child: const Icon(
-            Icons.science_outlined,
-            color: Colors.white,
-            size: 17,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
+        // Header: title + category tags (no icon)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Text(
                 study.title,
-                maxLines: 1,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: textTheme.titleSmall?.copyWith(
                   color: TaraTheme.textPrimary,
                   fontWeight: FontWeight.w800,
-                  letterSpacing: 0,
-                  height: 1.1,
-                  fontSize: 12,
+                  letterSpacing: -0.2,
+                  height: 1.15,
+                  fontSize: 13,
                 ),
               ),
-              const SizedBox(height: 5),
-              _StudySchedulePill(
-                label: _scheduleSummary(dateLabel, timeLabel),
-                compact: true,
-              ),
-              const SizedBox(height: 3),
-              _StudyMetaLine(
-                icon: Icons.place_outlined,
-                label: '${study.owner} - ${_locationLabel(locationLabel)}',
-                color: TaraTheme.textSecondary,
-                compact: true,
-              ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 7),
               Wrap(
-                spacing: 5,
-                runSpacing: 5,
+                spacing: 4,
+                runSpacing: 4,
                 children: <Widget>[
                   _StudyMiniTag(label: study.category),
                   if (study.stage.trim().isNotEmpty && study.stage != '-')
                     _StudyMiniTag(label: study.stage, subdued: true),
-                  _StudySlotBadge(study: study, compact: true),
-                  _StudyStatePill(
-                    label: _studyStatusLabel(study.status),
-                    success: _studyStatusIsAvailable(study.status),
-                    compact: true,
-                  ),
                 ],
               ),
-              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+        // Schedule highlighted band
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            decoration: BoxDecoration(
+              color: TaraTheme.primaryTint,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFFFD8B5)),
+            ),
+            child: Row(
+              children: <Widget>[
+                const Icon(
+                  Icons.calendar_month_rounded,
+                  size: 13,
+                  color: TaraTheme.primaryDark,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _scheduleSummary(dateLabel, timeLabel),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: TaraTheme.primaryDark,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      height: 1.2,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        // Location meta
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: _StudyMetaLine(
+            icon: Icons.place_outlined,
+            label: '${study.owner} · ${_locationLabel(locationLabel)}',
+            color: TaraTheme.textSecondary,
+            compact: true,
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Subtle divider before footer
+        const Divider(height: 1, thickness: 1, color: Color(0xFFF5E8DC)),
+        // Footer: slot badge + status + action button inline
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
+          child: Row(
+            children: <Widget>[
+              _StudySlotBadge(study: study, compact: true),
+              const SizedBox(width: 6),
+              _StudyStatePill(
+                label: _studyStatusLabel(study.status),
+                success: isAvailable,
+                compact: true,
+              ),
+              const Spacer(),
               SizedBox(
-                width: double.infinity,
-                height: 34,
+                height: 36,
                 child: FilledButton.icon(
                   onPressed: onOpen,
-                  icon: const Icon(Icons.open_in_new_rounded, size: 14),
-                  label: const Text('Open Score Sheet'),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    textStyle: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  icon: const Icon(Icons.open_in_new_rounded, size: 13),
+                  label: const Text('Open Sheet'),
                 ),
               ),
             ],
@@ -773,20 +945,40 @@ class _ConsumerStudyMobileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: TaraTheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFFFD8B5)),
-        boxShadow: const <BoxShadow>[
-          BoxShadow(
-            color: Color(0x0DF97316),
-            blurRadius: 12,
-            offset: Offset(0, 4),
-          ),
-        ],
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: TaraTheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFFFD8B5)),
+          boxShadow: const <BoxShadow>[
+            BoxShadow(
+              color: Color(0x14F97316),
+              blurRadius: 20,
+              offset: Offset(0, 8),
+            ),
+            BoxShadow(
+              color: Color(0x060F172A),
+              blurRadius: 4,
+              offset: Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Column(
+          children: <Widget>[
+            Container(
+              height: 4,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: <Color>[Color(0xFFFB923C), TaraTheme.primaryDark],
+                ),
+              ),
+            ),
+            _ConsumerStudyListItem(study: study, compact: true),
+          ],
+        ),
       ),
-      child: _ConsumerStudyListItem(study: study, compact: true),
     );
   }
 }
@@ -965,51 +1157,6 @@ class _StudyMetaLine extends StatelessWidget {
   }
 }
 
-class _StudySchedulePill extends StatelessWidget {
-  const _StudySchedulePill({required this.label, required this.compact});
-
-  final String label;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(
-        horizontal: compact ? 8 : 10,
-        vertical: compact ? 6 : 8,
-      ),
-      decoration: BoxDecoration(
-        color: TaraTheme.primaryTint,
-        borderRadius: BorderRadius.circular(7),
-        border: Border.all(color: const Color(0xFFFFD8B5)),
-      ),
-      child: Row(
-        children: <Widget>[
-          const Icon(
-            Icons.event_rounded,
-            size: 13,
-            color: TaraTheme.primaryDark,
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              label,
-              maxLines: compact ? 2 : 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: TaraTheme.primaryDark,
-                fontSize: compact ? 10 : 11,
-                fontWeight: FontWeight.w900,
-                height: 1.15,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _StudyMiniTag extends StatelessWidget {
   const _StudyMiniTag({required this.label, this.subdued = false});

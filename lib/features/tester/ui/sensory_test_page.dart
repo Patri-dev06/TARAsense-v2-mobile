@@ -471,7 +471,7 @@ class _SensoryTestPageState extends ConsumerState<SensoryTestPage> {
         : '';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F7F4),
+      backgroundColor: TaraTheme.background,
       appBar: AppBar(
         title: const Text('Sensory Test'),
         leading: IconButton(
@@ -491,7 +491,7 @@ class _SensoryTestPageState extends ConsumerState<SensoryTestPage> {
             ),
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
+                padding: const EdgeInsets.fromLTRB(18, 20, 18, 32),
                 children: <Widget>[
                   if (_isLoadingTest) ...<Widget>[
                     const _TestStatusPanel(
@@ -588,26 +588,20 @@ class _TestHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final int progressPct = (progress * 100).round().clamp(0, 100);
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 14),
       decoration: const BoxDecoration(
-        color: TaraTheme.surface,
-        border: Border(bottom: BorderSide(color: TaraTheme.border)),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[Color(0xFFFB923C), TaraTheme.primaryDark],
+        ),
       ),
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(
-            productName,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: TaraTheme.textPrimary,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 8),
           Row(
             children: <Widget>[
               _HeaderPill(label: phaseLabel),
@@ -617,15 +611,44 @@ class _TestHeader extends StatelessWidget {
               ],
             ],
           ),
-          const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 7,
-              backgroundColor: const Color(0xFFE5E7EB),
-              color: TaraTheme.primary,
+          const SizedBox(height: 10),
+          Text(
+            productName,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.3,
+              height: 1.1,
             ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 6,
+                    backgroundColor: const Color(0x33FFFFFF),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                '$progressPct%',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -652,9 +675,32 @@ class _InstructionsPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(
-            'You will evaluate $sampleCount product sample(s).',
-            style: Theme.of(context).textTheme.bodyLarge,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: TaraTheme.primaryTint,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFFFD8B5)),
+            ),
+            child: Row(
+              children: <Widget>[
+                const Icon(
+                  Icons.science_outlined,
+                  size: 16,
+                  color: TaraTheme.primaryDark,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'You will evaluate $sampleCount product sample${sampleCount == 1 ? '' : 's'}.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: TaraTheme.primaryDark,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 14),
           const _InstructionLine(text: 'Taste samples in order.'),
@@ -663,21 +709,51 @@ class _InstructionsPanel extends StatelessWidget {
           ),
           const _InstructionLine(text: 'There are no right or wrong answers.'),
           if (!participantReady) ...<Widget>[
-            const SizedBox(height: 8),
-            Text(
-              'A confirmed participant record is required before answering this score sheet.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: TaraTheme.roseText,
-                fontWeight: FontWeight.w700,
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: TaraTheme.rose,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFFDA4AF)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const Icon(
+                    Icons.lock_outline_rounded,
+                    color: TaraTheme.roseText,
+                    size: 17,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'A confirmed participant record is required before answering this score sheet.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: TaraTheme.roseText,
+                        fontWeight: FontWeight.w700,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
           const SizedBox(height: 18),
           SizedBox(
             width: double.infinity,
-            child: FilledButton(
+            child: FilledButton.icon(
               onPressed: participantReady ? onStart : null,
-              child: const Text('Start Evaluation'),
+              icon: Icon(
+                participantReady
+                    ? Icons.play_arrow_rounded
+                    : Icons.lock_outline_rounded,
+                size: 20,
+              ),
+              label: Text(
+                participantReady ? 'Start Evaluation' : 'Participant Required',
+              ),
             ),
           ),
         ],
@@ -1066,32 +1142,65 @@ class _TestPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: TaraTheme.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: TaraTheme.border),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x0A0F172A),
+            blurRadius: 16,
+            offset: Offset(0, 6),
+          ),
+          BoxShadow(
+            color: Color(0x050F172A),
+            blurRadius: 4,
+            offset: Offset(0, 1),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Row(
-            children: <Widget>[
-              Icon(icon, color: TaraTheme.primary),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: TaraTheme.textPrimary,
-                    fontWeight: FontWeight.w900,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+            child: Row(
+              children: <Widget>[
+                Container(
+                  height: 40,
+                  width: 40,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: <Color>[Color(0xFFFB923C), TaraTheme.primaryDark],
+                    ),
+                    borderRadius: BorderRadius.circular(11),
+                    boxShadow: const <BoxShadow>[
+                      BoxShadow(
+                        color: Color(0x22F97316),
+                        blurRadius: 8,
+                        offset: Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Icon(icon, color: Colors.white, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: TaraTheme.textPrimary,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.2,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
-          child,
+          const Divider(height: 1, thickness: 1),
+          Padding(padding: const EdgeInsets.all(18), child: child),
         ],
       ),
     );
@@ -1113,27 +1222,59 @@ class _ScaleButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
+      borderRadius: BorderRadius.circular(10),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
         decoration: BoxDecoration(
           color: selected ? TaraTheme.primaryTint : const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: selected ? TaraTheme.primary : TaraTheme.border,
+            width: selected ? 1.5 : 1,
           ),
         ),
         child: Row(
           children: <Widget>[
-            SizedBox(
-              width: 24,
-              child: Text(
-                option.value.toString(),
-                style: const TextStyle(fontWeight: FontWeight.w900),
+            Container(
+              height: 28,
+              width: 28,
+              decoration: BoxDecoration(
+                color: selected ? TaraTheme.primary : TaraTheme.border,
+                borderRadius: BorderRadius.circular(7),
+              ),
+              child: Center(
+                child: Text(
+                  option.value.toString(),
+                  style: TextStyle(
+                    color: selected ? Colors.white : TaraTheme.textSecondary,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 12,
+                    height: 1,
+                  ),
+                ),
               ),
             ),
-            Expanded(child: Text(option.label)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                option.label,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: selected
+                      ? TaraTheme.primaryDark
+                      : TaraTheme.textPrimary,
+                  fontWeight:
+                      selected ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ),
+            if (selected)
+              const Icon(
+                Icons.check_circle_rounded,
+                color: TaraTheme.primary,
+                size: 18,
+              ),
           ],
         ),
       ),
@@ -1149,17 +1290,18 @@ class _HeaderPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: TaraTheme.primaryTint,
+        color: const Color(0x33FFFFFF),
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0x40FFFFFF)),
       ),
       child: Text(
         label,
         style: const TextStyle(
-          color: TaraTheme.primaryDark,
+          color: Colors.white,
           fontSize: 11,
-          fontWeight: FontWeight.w900,
+          fontWeight: FontWeight.w800,
         ),
       ),
     );
@@ -1173,14 +1315,41 @@ class _InstructionLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: TaraTheme.border),
+      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Icon(Icons.check_rounded, size: 18, color: TaraTheme.primary),
-          const SizedBox(width: 8),
-          Expanded(child: Text(text)),
+          Container(
+            height: 24,
+            width: 24,
+            decoration: BoxDecoration(
+              color: TaraTheme.primaryTint,
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFFFFD8B5)),
+            ),
+            child: const Icon(
+              Icons.check_rounded,
+              size: 14,
+              color: TaraTheme.primaryDark,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: TaraTheme.textPrimary,
+                fontWeight: FontWeight.w600,
+                height: 1.3,
+              ),
+            ),
+          ),
         ],
       ),
     );

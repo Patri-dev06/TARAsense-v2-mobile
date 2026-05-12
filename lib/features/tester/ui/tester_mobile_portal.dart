@@ -94,40 +94,80 @@ class _ConsumerMobileHeader extends StatelessWidget {
     final String displayName = userName.trim().isEmpty
         ? 'Consumer'
         : userName.trim();
+    final String firstName = displayName.split(' ').first;
     final String greeting = _timeGreeting(DateTime.now().hour);
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: <Widget>[
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                greeting,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: TaraTheme.textSecondary,
-                  fontSize: 11,
-                  height: 1,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                displayName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontSize: 20,
-                  height: 1,
-                  letterSpacing: 0,
-                ),
-              ),
-            ],
-          ),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[Color(0xFFFB923C), TaraTheme.primaryDark],
         ),
-        const SizedBox(width: 12),
-        _ConsumerHeaderAvatar(initials: _consumerInitials(displayName)),
-      ],
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x18F97316),
+            blurRadius: 14,
+            offset: Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        children: <Widget>[
+          Container(
+            height: 40,
+            width: 40,
+            decoration: BoxDecoration(
+              color: const Color(0x33FFFFFF),
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0x44FFFFFF)),
+            ),
+            child: Center(
+              child: Text(
+                _consumerInitials(displayName),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 14,
+                  height: 1,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  '$greeting · Consumer',
+                  style: const TextStyle(
+                    color: Color(0xCCFFFFFF),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    height: 1,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  firstName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    height: 1.1,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -758,70 +798,303 @@ class _ConsumerMobileSettingsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: TaraTheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: TaraTheme.border),
-      ),
-      child: SizedBox(
-        height: MediaQuery.sizeOf(context).height - 190,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Row(
-              children: <Widget>[
-                CircleAvatar(
-                  backgroundColor: TaraTheme.primaryTint,
-                  child: Text(
-                    _consumerInitials(userName),
-                    style: const TextStyle(
-                      color: TaraTheme.primaryDark,
-                      fontWeight: FontWeight.w900,
+    final String initials = _consumerInitials(userName);
+    final String displayName =
+        userName.trim().isEmpty ? 'Consumer' : userName.trim();
+    final String org = organization?.trim() ?? '';
+
+    return SizedBox(
+      height: MediaQuery.sizeOf(context).height - 190,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          // Gradient hero header
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: <Color>[Color(0xFFFB923C), TaraTheme.primaryDark],
+                ),
+              ),
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+              child: Row(
+                children: <Widget>[
+                  Container(
+                    height: 64,
+                    width: 64,
+                    decoration: BoxDecoration(
+                      color: const Color(0x33FFFFFF),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0x50FFFFFF),
+                        width: 2,
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        initials,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 22,
+                          height: 1,
+                          letterSpacing: 1,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    userName,
-                    style: Theme.of(context).textTheme.titleMedium,
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          displayName,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 18,
+                            height: 1.15,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                        const SizedBox(height: 7),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0x33FFFFFF),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: const Color(0x40FFFFFF),
+                            ),
+                          ),
+                          child: const Text(
+                            'Consumer',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 11,
+                              height: 1,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Info tiles card
+          Container(
+            decoration: BoxDecoration(
+              color: TaraTheme.surface,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: const <BoxShadow>[
+                BoxShadow(
+                  color: Color(0x0A0F172A),
+                  blurRadius: 12,
+                  offset: Offset(0, 4),
                 ),
               ],
             ),
-            const SizedBox(height: 14),
-            _ConsumerMobileSettingsFormGrid(
-              fields: <_ConsumerMobileSettingsField>[
-                _ConsumerMobileSettingsField(label: 'Name', value: userName),
-                _ConsumerMobileSettingsField(label: 'Email', value: email),
-                const _ConsumerMobileSettingsField(
+            child: Column(
+              children: <Widget>[
+                _ProfileInfoTile(
+                  icon: Icons.person_outline_rounded,
+                  label: 'Name',
+                  value: displayName,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16),
+                  ),
+                ),
+                const Divider(height: 1, indent: 56),
+                _ProfileInfoTile(
+                  icon: Icons.email_outlined,
+                  label: 'Email',
+                  value: email.trim().isEmpty ? '-' : email,
+                ),
+                const Divider(height: 1, indent: 56),
+                _ProfileInfoTile(
+                  icon: Icons.verified_user_outlined,
                   label: 'Role',
                   value: 'Consumer',
+                  borderRadius: org.isEmpty
+                      ? const BorderRadius.vertical(
+                          bottom: Radius.circular(16),
+                        )
+                      : null,
                 ),
-                if (organization != null && organization!.trim().isNotEmpty)
-                  _ConsumerMobileSettingsField(
+                if (org.isNotEmpty) ...<Widget>[
+                  const Divider(height: 1, indent: 56),
+                  _ProfileInfoTile(
+                    icon: Icons.business_outlined,
                     label: 'Organization',
-                    value: organization!.trim(),
+                    value: org,
+                    borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(16),
+                    ),
                   ),
+                ],
               ],
             ),
-            const Spacer(),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: authBusy ? null : onLogout,
-                icon: const Icon(Icons.logout_rounded),
-                label: const Text('Log out'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: TaraTheme.roseText,
-                  side: const BorderSide(color: Color(0xFFFECDD3)),
+          ),
+          const Spacer(),
+          // Logout row
+          Container(
+            decoration: BoxDecoration(
+              color: TaraTheme.rose,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFFDA4AF)),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: authBusy ? null : onLogout,
+                borderRadius: BorderRadius.circular(16),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  child: Row(
+                    children: <Widget>[
+                      Container(
+                        height: 38,
+                        width: 38,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFECDD3),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.logout_rounded,
+                          color: TaraTheme.roseText,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              'Log out',
+                              style: Theme.of(
+                                context,
+                              ).textTheme.titleSmall?.copyWith(
+                                color: TaraTheme.roseText,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            Text(
+                              'Sign out of your account',
+                              style: Theme.of(
+                                context,
+                              ).textTheme.bodySmall?.copyWith(
+                                color: TaraTheme.roseText,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (authBusy)
+                        const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: TaraTheme.roseText,
+                          ),
+                        )
+                      else
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          color: TaraTheme.roseText,
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileInfoTile extends StatelessWidget {
+  const _ProfileInfoTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.borderRadius,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final BorderRadius? borderRadius;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: TaraTheme.surface,
+        borderRadius: borderRadius,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: <Widget>[
+          Container(
+            height: 36,
+            width: 36,
+            decoration: BoxDecoration(
+              color: TaraTheme.primaryTint,
+              borderRadius: BorderRadius.circular(9),
+              border: Border.all(color: const Color(0xFFFFD8B5)),
+            ),
+            child: Icon(icon, color: TaraTheme.primaryDark, size: 18),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: TaraTheme.textSecondary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    height: 1,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: TaraTheme.textPrimary,
+                    fontWeight: FontWeight.w700,
+                    height: 1.2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -834,36 +1107,6 @@ class _ConsumerFilterItem {
   final _ConsumerView view;
 }
 
-class _ConsumerHeaderAvatar extends StatelessWidget {
-  const _ConsumerHeaderAvatar({required this.initials});
-
-  final String initials;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 38,
-      width: 38,
-      decoration: BoxDecoration(
-        color: TaraTheme.primaryTint,
-        shape: BoxShape.circle,
-        border: Border.all(color: const Color(0xFFFFD8B5), width: 1.5),
-      ),
-      child: Center(
-        child: Text(
-          initials,
-          style: const TextStyle(
-            color: TaraTheme.primaryDark,
-            fontWeight: FontWeight.w900,
-            fontSize: 13,
-            height: 1,
-            letterSpacing: 0.5,
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 String _timeGreeting(int hour) {
   if (hour >= 5 && hour < 12) return 'Good morning,';
@@ -872,49 +1115,6 @@ String _timeGreeting(int hour) {
   return 'Good night,';
 }
 
-class _ConsumerMobileSettingsFormGrid extends StatelessWidget {
-  const _ConsumerMobileSettingsFormGrid({required this.fields});
-
-  final List<_ConsumerMobileSettingsField> fields;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        final bool twoColumns = constraints.maxWidth >= 560;
-        final double fieldWidth = twoColumns
-            ? (constraints.maxWidth - 12) / 2
-            : constraints.maxWidth;
-        return Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: fields
-              .map(
-                (_ConsumerMobileSettingsField field) => SizedBox(
-                  width: fieldWidth,
-                  child: TextFormField(
-                    initialValue: field.value.isEmpty ? '-' : field.value,
-                    readOnly: true,
-                    decoration: InputDecoration(labelText: field.label),
-                  ),
-                ),
-              )
-              .toList(),
-        );
-      },
-    );
-  }
-}
-
-class _ConsumerMobileSettingsField {
-  const _ConsumerMobileSettingsField({
-    required this.label,
-    required this.value,
-  });
-
-  final String label;
-  final String value;
-}
 
 class _ConsumerMobileNavItem extends StatelessWidget {
   const _ConsumerMobileNavItem({

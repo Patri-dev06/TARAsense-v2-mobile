@@ -84,6 +84,55 @@ class MsmeStudyItem {
   }
 }
 
+class EvaluatePeerStudyItem {
+  const EvaluatePeerStudyItem({
+    required this.id,
+    required this.title,
+    required this.productName,
+    required this.creatorName,
+    required this.creatorOrganization,
+    required this.category,
+    required this.stage,
+    required this.status,
+    required this.sampleSize,
+    required this.responseCount,
+    this.hasStarted = false,
+  });
+
+  final String id;
+  final String title;
+  final String productName;
+  final String creatorName;
+  final String creatorOrganization;
+  final String category;
+  final String stage;
+  final String status;
+  final int sampleSize;
+  final int responseCount;
+  final bool hasStarted;
+
+  double get progress {
+    if (sampleSize <= 0) return 0;
+    return (responseCount / sampleSize).clamp(0, 1).toDouble();
+  }
+
+  factory EvaluatePeerStudyItem.fromJson(Map<String, dynamic> json) {
+    return EvaluatePeerStudyItem(
+      id: (json['id'] ?? '').toString(),
+      title: (json['title'] ?? '').toString(),
+      productName: (json['productName'] ?? '').toString(),
+      creatorName: (json['creatorName'] ?? '').toString(),
+      creatorOrganization: (json['creatorOrganization'] ?? '').toString(),
+      category: (json['category'] ?? '').toString(),
+      stage: (json['stage'] ?? '').toString(),
+      status: (json['status'] ?? '').toString(),
+      sampleSize: _asInt(json['sampleSize']),
+      responseCount: _asInt(json['responseCount']),
+      hasStarted: json['hasStarted'] == true,
+    );
+  }
+}
+
 class MsmeDashboardData {
   const MsmeDashboardData({
     required this.workspaceLabel,
@@ -153,7 +202,9 @@ class StudyAttributeSeed {
   factory StudyAttributeSeed.fromJson(Map<String, dynamic> json) {
     return StudyAttributeSeed(
       name: (json['name'] ?? '').toString(),
-      dimension: (json['dimension'] ?? '').toString(),
+      dimension: (json['dimension']?.toString() ?? '').trim().isEmpty
+          ? 'Taste'
+          : json['dimension'].toString().trim(),
     );
   }
 }
@@ -376,55 +427,78 @@ class MsmeProfileData {
   final List<SelectOption> genderOptions;
 
   factory MsmeProfileData.fromJson(Map<String, dynamic> json) {
-    final header = Map<String, dynamic>.from(
-      json['header'] as Map? ?? <String, dynamic>{},
-    );
-    final basic = Map<String, dynamic>.from(
-      json['basicInformation'] as Map? ?? <String, dynamic>{},
-    );
-    final preferences = Map<String, dynamic>.from(
-      json['preferences'] as Map? ?? <String, dynamic>{},
-    );
+    // Support both nested shape (header/basicInformation/preferences/options)
+    // and flat shape where fields sit directly on the root object.
+    final bool nested = json.containsKey('basicInformation');
+
+    final header = nested
+        ? Map<String, dynamic>.from(json['header'] as Map? ?? <String, dynamic>{})
+        : <String, dynamic>{};
+    final basic = nested
+        ? Map<String, dynamic>.from(json['basicInformation'] as Map? ?? <String, dynamic>{})
+        : json;
+    final preferences = nested
+        ? Map<String, dynamic>.from(json['preferences'] as Map? ?? <String, dynamic>{})
+        : json;
     final consumption = Map<String, dynamic>.from(
-      preferences['consumption'] as Map? ?? <String, dynamic>{},
+      (nested ? preferences['consumption'] : json['consumption']) as Map? ??
+          <String, dynamic>{},
     );
-    final options = Map<String, dynamic>.from(
-      json['options'] as Map? ?? <String, dynamic>{},
-    );
+    final options = nested
+        ? Map<String, dynamic>.from(json['options'] as Map? ?? <String, dynamic>{})
+        : json;
 
     return MsmeProfileData(
-      eyebrow: (header['eyebrow'] ?? '').toString(),
-      title: (header['title'] ?? '').toString(),
-      subtitle: (header['subtitle'] ?? '').toString(),
+      eyebrow: (header['eyebrow'] ?? json['eyebrow'] ?? '').toString(),
+      title: (header['title'] ?? json['title'] ?? '').toString(),
+      subtitle: (header['subtitle'] ?? json['subtitle'] ?? '').toString(),
       name: (basic['name'] ?? '').toString(),
       email: (basic['email'] ?? '').toString(),
-      organization: (basic['organization'] ?? '').toString(),
+      organization: (basic['organization'] ?? json['organization'] ?? '').toString(),
       age: _asInt(basic['age']),
-      gender: (basic['gender'] ?? '').toString(),
-      location: (basic['location'] ?? '').toString(),
-      occupation: (basic['occupation'] ?? '').toString(),
-      lifestyle: _parseStringList(preferences['lifestyle']),
-      dietaryPrefs: _parseStringList(preferences['dietaryPrefs']),
+      gender: (basic['gender']?.toString() ?? '').trim().isEmpty
+          ? 'PREFER_NOT_SAY'
+          : basic['gender'].toString().trim(),
+      location: (basic['location'] ?? json['location'] ?? '').toString(),
+      occupation: (basic['occupation'] ?? json['occupation'] ?? '').toString(),
+      lifestyle: _parseStringList(
+        preferences['lifestyle'] ?? json['lifestyle'],
+      ),
+      dietaryPrefs: _parseStringList(
+        preferences['dietaryPrefs'] ?? json['dietaryPrefs'],
+      ),
       coffeeDrinker: consumption['coffeeDrinker'] == true,
       snackConsumer: consumption['snackConsumer'] == true,
       energyDrinkConsumer: consumption['energyDrinkConsumer'] == true,
-      history: (json['participationHistory'] as List<dynamic>? ?? <dynamic>[])
-          .whereType<Map>()
-          .map(
-            (Map item) =>
-                ProfileHistoryItem.fromJson(Map<String, dynamic>.from(item)),
-          )
-          .toList(),
+      history: _parseHistory(
+        json['participationHistory'] ?? json['history'],
+      ),
       metadata: ProfileMetadata.fromJson(
         Map<String, dynamic>.from(
           json['metadata'] as Map? ?? <String, dynamic>{},
         ),
       ),
-      lifestyleOptions: _parseOptions(options['lifestyles']),
-      dietaryOptions: _parseOptions(options['dietaryPrefs']),
-      genderOptions: _parseOptions(options['genders']),
+      lifestyleOptions: _parseOptions(
+        options['lifestyles'] ?? options['lifestyleOptions'] ?? json['lifestyles'],
+      ),
+      dietaryOptions: _parseOptions(
+        options['dietaryPrefs'] ?? options['dietaryOptions'] ?? json['dietaryOptions'],
+      ),
+      genderOptions: _parseOptions(
+        options['genders'] ?? options['genderOptions'] ?? json['genders'],
+      ),
     );
   }
+}
+
+List<ProfileHistoryItem> _parseHistory(dynamic value) {
+  return (value as List<dynamic>? ?? <dynamic>[])
+      .whereType<Map>()
+      .map(
+        (Map item) =>
+            ProfileHistoryItem.fromJson(Map<String, dynamic>.from(item)),
+      )
+      .toList();
 }
 
 List<SelectOption> _parseOptions(dynamic value) {

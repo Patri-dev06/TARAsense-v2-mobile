@@ -60,15 +60,17 @@ class _ProfileTab extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: onRefresh,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(18, 6, 18, 24),
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 24),
         children: <Widget>[
-          _HeroWorkspaceCard(
-            title: profile?.title ?? 'My Profile',
-            subtitle:
-                profile?.subtitle ??
-                'Maintain your panelist data for better matching in future studies.',
-            actionLabel: isSaving ? 'Saving...' : 'Save Profile',
-            onAction: isSaving ? null : () => unawaited(onSave()),
+          _MsmePageHeader(
+            label: 'MSME WORKSPACE',
+            title: profile?.name.trim().isEmpty ?? true
+                ? 'My Profile'
+                : profile!.name,
+            subtitle: profile?.subtitle.trim().isEmpty ?? true
+                ? 'Maintain your panelist data for better matching in future studies.'
+                : profile!.subtitle,
+            icon: Icons.person_rounded,
           ),
           const SizedBox(height: 16),
           if (isLoading)
@@ -110,7 +112,13 @@ class _ProfileTab extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    initialValue: selectedGender,
+                    key: ValueKey(selectedGender),
+                    initialValue: profile!.genderOptions
+                            .any((SelectOption o) => o.value == selectedGender)
+                        ? selectedGender
+                        : (profile!.genderOptions.isNotEmpty
+                            ? profile!.genderOptions.first.value
+                            : null),
                     items: profile!.genderOptions
                         .map(
                           (SelectOption option) => DropdownMenuItem<String>(
@@ -240,6 +248,26 @@ class _ProfileTab extends StatelessWidget {
                           )
                           .toList(),
                     ),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: isSaving ? null : () => unawaited(onSave()),
+                style: FilledButton.styleFrom(
+                  backgroundColor: TaraTheme.primary,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(0, 52),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  textStyle: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
+                ),
+                child: Text(isSaving ? 'Saving...' : 'Save Profile'),
+              ),
             ),
             const SizedBox(height: 14),
             _SectionCard(

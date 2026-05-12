@@ -94,13 +94,15 @@ class _CreateStudyTab extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(18, 6, 18, 24),
         children: <Widget>[
-          _HeroWorkspaceCard(
-            title: options?.title ?? 'Create Study',
-            subtitle:
-                options?.subtitle ??
-                'Configure Market or Sensory studies and generate a form with QR code.',
-            actionLabel: isSubmitting ? 'Creating...' : 'Generate Study Form',
-            onAction: isSubmitting ? null : () => unawaited(onSubmit()),
+          _MsmePageHeader(
+            label: 'MSME WORKSPACE',
+            title: options?.title.trim().isEmpty ?? true
+                ? 'Create Study'
+                : options!.title,
+            subtitle: options?.subtitle.trim().isEmpty ?? true
+                ? 'Configure Market or Sensory studies and generate a QR-linked form.'
+                : options!.subtitle,
+            icon: Icons.add_circle_rounded,
           ),
           const SizedBox(height: 16),
           if (isLoading)
@@ -157,6 +159,7 @@ class _CreateStudyTab extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
+                      key: ValueKey(selectedFacility),
                       initialValue: selectedFacility,
                       items:
                           (selectedRegion == null
