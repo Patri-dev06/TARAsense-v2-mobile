@@ -1,3 +1,68 @@
+class FicStats {
+  const FicStats({
+    required this.bookingNotifications,
+    required this.upcomingSessions,
+    required this.pendingConfirmation,
+    required this.uploadedStudies,
+    required this.activeStudies,
+    required this.totalResponses,
+  });
+
+  final int bookingNotifications;
+  final int upcomingSessions;
+  final int pendingConfirmation;
+  final int uploadedStudies;
+  final int activeStudies;
+  final int totalResponses;
+
+  factory FicStats.fromJson(Map<String, dynamic> json) {
+    return FicStats(
+      bookingNotifications: _firstPositiveInt(<int>[
+        _firstInt(json, const <String>[
+          'bookingNotifications',
+          'bookingCount',
+          'newBookings',
+        ]),
+      ]),
+      upcomingSessions: _firstPositiveInt(<int>[
+        _firstInt(json, const <String>[
+          'upcomingSessions',
+          'upcomingSessionCount',
+          'confirmedSessions',
+        ]),
+      ]),
+      pendingConfirmation: _firstPositiveInt(<int>[
+        _firstInt(json, const <String>[
+          'pendingConfirmation',
+          'pendingCount',
+          'awaitingConfirmation',
+        ]),
+      ]),
+      uploadedStudies: _firstPositiveInt(<int>[
+        _firstInt(json, const <String>[
+          'uploadedStudies',
+          'totalStudies',
+          'studyCount',
+        ]),
+      ]),
+      activeStudies: _firstPositiveInt(<int>[
+        _firstInt(json, const <String>[
+          'activeStudies',
+          'liveStudies',
+          'runningStudies',
+        ]),
+      ]),
+      totalResponses: _firstPositiveInt(<int>[
+        _firstInt(json, const <String>[
+          'totalResponses',
+          'responseCount',
+          'responses',
+        ]),
+      ]),
+    );
+  }
+}
+
 class FicDashboardData {
   const FicDashboardData({
     required this.activeSessions,
@@ -5,6 +70,7 @@ class FicDashboardData {
     required this.nextTime,
     required this.studies,
     required this.calendar,
+    this.stats,
   });
 
   final int activeSessions;
@@ -12,6 +78,7 @@ class FicDashboardData {
   final String nextTime;
   final List<FicStudy> studies;
   final List<FicCalendarItem> calendar;
+  final FicStats? stats;
 
   factory FicDashboardData.fromJson(dynamic value) {
     final Map<String, dynamic> json = _asMap(value);
@@ -31,6 +98,9 @@ class FicDashboardData {
         ? null
         : calendar.first;
     final FicStudy? nextStudy = studies.isEmpty ? null : studies.first;
+
+    final dynamic rawStats = json['stats'] ?? json['summary'] ?? json;
+    final FicStats stats = FicStats.fromJson(_asMap(rawStats));
 
     return FicDashboardData(
       activeSessions: _firstPositiveInt(<int>[
@@ -64,6 +134,7 @@ class FicDashboardData {
       ]),
       studies: studies,
       calendar: calendar,
+      stats: stats,
     );
   }
 }

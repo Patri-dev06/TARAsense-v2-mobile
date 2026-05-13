@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,16 +10,17 @@ import 'package:tarasense_mobile/features/auth/ui/auth_loading_dialog.dart';
 import 'package:tarasense_mobile/features/fic/data/fic_api.dart';
 import 'package:tarasense_mobile/features/fic/domain/fic_models.dart';
 
-enum _FicView { dashboard, queue, calendar, profile }
+// ─── Riverpod providers ───────────────────────────────────────────────────────
 
 final _ficDashboardProvider = FutureProvider.autoDispose<FicDashboardData>((
   ref,
 ) async {
-  final session = ref.watch(
-    authControllerProvider.select((state) => state.session),
-  );
-  final String accessToken = session?.tokens.accessToken ?? '';
-  if (accessToken.trim().isEmpty) {
+  final String token = ref
+          .watch(authControllerProvider.select((s) => s.session))
+          ?.tokens
+          .accessToken ??
+      '';
+  if (token.trim().isEmpty) {
     return const FicDashboardData(
       activeSessions: 0,
       nextTitle: '',
@@ -26,55 +29,49 @@ final _ficDashboardProvider = FutureProvider.autoDispose<FicDashboardData>((
       calendar: <FicCalendarItem>[],
     );
   }
-  return ref.watch(ficApiProvider).fetchDashboard(accessToken);
+  return ref.watch(ficApiProvider).fetchDashboard(token);
 });
 
 final _ficStudiesProvider = FutureProvider.autoDispose<List<FicStudy>>((
   ref,
 ) async {
-  final session = ref.watch(
-    authControllerProvider.select((state) => state.session),
-  );
-  final String accessToken = session?.tokens.accessToken ?? '';
-  if (accessToken.trim().isEmpty) {
-    return <FicStudy>[];
-  }
-  return ref.watch(ficApiProvider).fetchStudies(accessToken);
+  final String token = ref
+          .watch(authControllerProvider.select((s) => s.session))
+          ?.tokens
+          .accessToken ??
+      '';
+  if (token.trim().isEmpty) return <FicStudy>[];
+  return ref.watch(ficApiProvider).fetchStudies(token);
 });
 
-final _ficCalendarProvider = FutureProvider.autoDispose<List<FicCalendarItem>>((
-  ref,
-) async {
-  final session = ref.watch(
-    authControllerProvider.select((state) => state.session),
-  );
-  final String accessToken = session?.tokens.accessToken ?? '';
-  if (accessToken.trim().isEmpty) {
-    return <FicCalendarItem>[];
-  }
-  return ref.watch(ficApiProvider).fetchCalendar(accessToken);
-});
+final _ficCalendarProvider =
+    FutureProvider.autoDispose<List<FicCalendarItem>>((ref) async {
+      final String token = ref
+              .watch(authControllerProvider.select((s) => s.session))
+              ?.tokens
+              .accessToken ??
+          '';
+      if (token.trim().isEmpty) return <FicCalendarItem>[];
+      return ref.watch(ficApiProvider).fetchCalendar(token);
+    });
 
 final _ficAvailabilityProvider =
     FutureProvider.autoDispose<List<FicAvailabilityDay>>((ref) async {
-      final session = ref.watch(
-        authControllerProvider.select((state) => state.session),
-      );
-      final String accessToken = session?.tokens.accessToken ?? '';
-      if (accessToken.trim().isEmpty) {
-        return <FicAvailabilityDay>[];
-      }
+      final String token = ref
+              .watch(authControllerProvider.select((s) => s.session))
+              ?.tokens
+              .accessToken ??
+          '';
+      if (token.trim().isEmpty) return <FicAvailabilityDay>[];
       final DateTime now = DateTime.now();
-      final DateTime startDate = DateTime(now.year, now.month);
-      final DateTime endDate = DateTime(now.year, now.month + 1, 0);
-      return ref
-          .watch(ficApiProvider)
-          .fetchAvailability(
-            accessToken,
-            startDate: startDate,
-            endDate: endDate,
-          );
+      return ref.watch(ficApiProvider).fetchAvailability(
+        token,
+        startDate: DateTime(now.year, now.month),
+        endDate: DateTime(now.year, now.month + 2, 0),
+      );
     });
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 class FicWorkspacePage extends ConsumerStatefulWidget {
   const FicWorkspacePage({super.key});
@@ -84,218 +81,120 @@ class FicWorkspacePage extends ConsumerStatefulWidget {
 }
 
 class _FicWorkspacePageState extends ConsumerState<FicWorkspacePage> {
-  _FicView _currentView = _FicView.dashboard;
+  int _tabIndex = 0;
+  bool _isTogglingDate = false;
+
+  String? get _accessToken =>
+      ref.read(authControllerProvider).session?.tokens.accessToken;
+
+  Future<void> _toggleAvailability(FicAvailabilityDay day) async {
+    if (_isTogglingDate) return;
+    final String? token = _accessToken;
+    if (token == null) return;
+    setState(() => _isTogglingDate = true);
+    try {
+      await ref
+          .read(ficApiProvider)
+          .updateAvailability(
+            token,
+            date: day.date.toLocal(),
+            payload: <String, dynamic>{'available': !day.available},
+          );
+      ref.invalidate(_ficAvailabilityProvider);
+    } catch (_) {
+      // ignore — provider stays stale; user can pull-to-refresh
+    } finally {
+      if (mounted) setState(() => _isTogglingDate = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
     final session = authState.session;
-    final String displayName = session?.user.name.trim().isNotEmpty == true
+    final String displayName =
+        session?.user.name.trim().isNotEmpty == true
         ? session!.user.name.trim()
-        : 'FIC Station 3';
-    final String location =
+        : 'FIC Station';
+    final String facility =
         session?.user.organization?.trim().isNotEmpty == true
         ? session!.user.organization!.trim()
-        : 'Davao del Sur';
-    final AsyncValue<FicDashboardData> dashboardAsync = ref.watch(
-      _ficDashboardProvider,
-    );
-    final AsyncValue<List<FicStudy>> studiesAsync = ref.watch(
-      _ficStudiesProvider,
-    );
-    final AsyncValue<List<FicCalendarItem>> calendarAsync = ref.watch(
-      _ficCalendarProvider,
-    );
-    final AsyncValue<List<FicAvailabilityDay>> availabilityAsync = ref.watch(
-      _ficAvailabilityProvider,
-    );
+        : 'Assigned Facility';
+
+    final AsyncValue<FicDashboardData> dashboardAsync =
+        ref.watch(_ficDashboardProvider);
+    final AsyncValue<List<FicStudy>> studiesAsync =
+        ref.watch(_ficStudiesProvider);
+    final AsyncValue<List<FicCalendarItem>> calendarAsync =
+        ref.watch(_ficCalendarProvider);
+    final AsyncValue<List<FicAvailabilityDay>> availabilityAsync =
+        ref.watch(_ficAvailabilityProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F1EC),
+      backgroundColor: TaraTheme.background,
+      bottomNavigationBar: _FicBottomNav(
+        currentIndex: _tabIndex,
+        onChanged: (int i) => setState(() => _tabIndex = i),
+      ),
       body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 430),
-            child: Container(
-              color: const Color(0xFFF3F1EC),
-              child: Column(
-                children: <Widget>[
-                  Expanded(
-                    child: ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
-                      children: <Widget>[
-                        _FicHeader(title: displayName, subtitle: location),
-                        const SizedBox(height: 14),
-                        _buildCurrentView(
-                          displayName: displayName,
-                          location: location,
-                          authBusy: authState.isBusy,
-                          dashboardAsync: dashboardAsync,
-                          studiesAsync: studiesAsync,
-                          calendarAsync: calendarAsync,
-                          availabilityAsync: availabilityAsync,
-                        ),
-                      ],
-                    ),
-                  ),
-                  _FicBottomNav(
-                    currentView: _currentView,
-                    onChanged: (view) => setState(() => _currentView = view),
-                  ),
-                ],
+        bottom: false,
+        child: IndexedStack(
+          index: _tabIndex,
+          children: <Widget>[
+            _FicDashboardTab(
+              displayName: displayName,
+              facility: facility,
+              dashboardAsync: dashboardAsync,
+              studiesAsync: studiesAsync,
+              availabilityAsync: availabilityAsync,
+              onViewQueue: () => setState(() => _tabIndex = 1),
+            ),
+            _FicQueueTab(
+              displayName: displayName,
+              facility: facility,
+              studiesAsync: studiesAsync,
+            ),
+            _FicCalendarTab(
+              displayName: displayName,
+              facility: facility,
+              calendarAsync: calendarAsync,
+              availabilityAsync: availabilityAsync,
+              isTogglingDate: _isTogglingDate,
+              onToggleDate: _toggleAvailability,
+              onRefreshAvailability: () => ref.invalidate(_ficAvailabilityProvider),
+            ),
+            _FicProfileTab(
+              displayName: displayName,
+              facility: facility,
+              email: session?.user.email ?? '',
+              role: session?.user.role ?? 'FIC',
+              authBusy: authState.isBusy,
+              onLogout: () => showLogoutLoadingAndRun(
+                context,
+                () => ref.read(authControllerProvider.notifier).logout(),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );
   }
-
-  Widget _buildCurrentView({
-    required String displayName,
-    required String location,
-    required bool authBusy,
-    required AsyncValue<FicDashboardData> dashboardAsync,
-    required AsyncValue<List<FicStudy>> studiesAsync,
-    required AsyncValue<List<FicCalendarItem>> calendarAsync,
-    required AsyncValue<List<FicAvailabilityDay>> availabilityAsync,
-  }) {
-    switch (_currentView) {
-      case _FicView.dashboard:
-        return _FicDashboardTab(
-          dashboardAsync: dashboardAsync,
-          studiesAsync: studiesAsync,
-          availabilityAsync: availabilityAsync,
-          onViewQueue: () => setState(() => _currentView = _FicView.queue),
-        );
-      case _FicView.queue:
-        return _FicQueueTab(studiesAsync: studiesAsync);
-      case _FicView.calendar:
-        return _FicCalendarTab(
-          calendarAsync: calendarAsync,
-          availabilityAsync: availabilityAsync,
-        );
-      case _FicView.profile:
-        return _FicProfileTab(
-          name: displayName,
-          location: location,
-          email: ref.watch(authControllerProvider).session?.user.email ?? '',
-          role: ref.watch(authControllerProvider).session?.user.role ?? 'FIC',
-          authBusy: authBusy,
-          onLogout: () => showLogoutLoadingAndRun(
-            context,
-            () => ref.read(authControllerProvider.notifier).logout(),
-          ),
-        );
-    }
-  }
 }
 
-class _FicHeader extends StatelessWidget {
-  const _FicHeader({required this.title, required this.subtitle});
-
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: <Color>[Color(0xFF0EA5E9), Color(0xFF0369A1)],
-        ),
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: const <BoxShadow>[
-          BoxShadow(
-            color: Color(0x180EA5E9),
-            blurRadius: 14,
-            offset: Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Row(
-        children: <Widget>[
-          Container(
-            height: 40,
-            width: 40,
-            decoration: BoxDecoration(
-              color: const Color(0x33FFFFFF),
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0x44FFFFFF)),
-            ),
-            child: Center(
-              child: Text(
-                _ficInitials(title),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 13,
-                  height: 1,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    const Icon(
-                      Icons.place_outlined,
-                      color: Color(0xCCFFFFFF),
-                      size: 11,
-                    ),
-                    const SizedBox(width: 3),
-                    Expanded(
-                      child: Text(
-                        'FIC Station · $subtitle',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Color(0xCCFFFFFF),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          height: 1,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    height: 1.1,
-                    letterSpacing: -0.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// ─── Dashboard tab ────────────────────────────────────────────────────────────
 
 class _FicDashboardTab extends StatelessWidget {
   const _FicDashboardTab({
+    required this.displayName,
+    required this.facility,
     required this.dashboardAsync,
     required this.studiesAsync,
     required this.availabilityAsync,
     required this.onViewQueue,
   });
 
+  final String displayName;
+  final String facility;
   final AsyncValue<FicDashboardData> dashboardAsync;
   final AsyncValue<List<FicStudy>> studiesAsync;
   final AsyncValue<List<FicAvailabilityDay>> availabilityAsync;
@@ -303,24 +202,226 @@ class _FicDashboardTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(18, 6, 18, 24),
       children: <Widget>[
-        _FicActiveSessionsCard(
+        _FicHeader(
+          label: 'FIC WORKSPACE',
+          title: displayName,
+          subtitle: facility,
+          icon: Icons.widgets_outlined,
+        ),
+        const SizedBox(height: 14),
+        _FicSessionsCard(
           dashboardAsync: dashboardAsync,
           onViewQueue: onViewQueue,
         ),
         const SizedBox(height: 12),
-        _FicCalendarCard(availabilityAsync: availabilityAsync),
+        _FicStatsGrid(dashboardAsync: dashboardAsync),
         const SizedBox(height: 12),
-        _FicStudyQueueCard(studiesAsync: studiesAsync),
+        _FicAvailabilityCard(
+          availabilityAsync: availabilityAsync,
+          toggleable: false,
+          isToggling: false,
+          onToggle: null,
+        ),
+        const SizedBox(height: 12),
+        _FicPanel(
+          title: 'Study Queue',
+          child: _FicStudyList(studiesAsync: studiesAsync, limit: 3),
+        ),
       ],
     );
   }
 }
 
-class _FicActiveSessionsCard extends StatelessWidget {
-  const _FicActiveSessionsCard({
+// ─── Queue tab ────────────────────────────────────────────────────────────────
+
+class _FicQueueTab extends StatelessWidget {
+  const _FicQueueTab({
+    required this.displayName,
+    required this.facility,
+    required this.studiesAsync,
+  });
+
+  final String displayName;
+  final String facility;
+  final AsyncValue<List<FicStudy>> studiesAsync;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(18, 6, 18, 24),
+      children: <Widget>[
+        _FicHeader(
+          label: 'FIC WORKSPACE',
+          title: 'Facility Queue',
+          subtitle: facility,
+          icon: Icons.format_list_bulleted_rounded,
+        ),
+        const SizedBox(height: 14),
+        _FicPanel(
+          title: 'Facility Queue',
+          child: _FicStudyList(studiesAsync: studiesAsync, limit: 50),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Calendar tab ─────────────────────────────────────────────────────────────
+
+class _FicCalendarTab extends StatelessWidget {
+  const _FicCalendarTab({
+    required this.displayName,
+    required this.facility,
+    required this.calendarAsync,
+    required this.availabilityAsync,
+    required this.isTogglingDate,
+    required this.onToggleDate,
+    required this.onRefreshAvailability,
+  });
+
+  final String displayName;
+  final String facility;
+  final AsyncValue<List<FicCalendarItem>> calendarAsync;
+  final AsyncValue<List<FicAvailabilityDay>> availabilityAsync;
+  final bool isTogglingDate;
+  final Future<void> Function(FicAvailabilityDay) onToggleDate;
+  final VoidCallback onRefreshAvailability;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(18, 6, 18, 24),
+      children: <Widget>[
+        _FicHeader(
+          label: 'FIC WORKSPACE',
+          title: 'FIC Calendar',
+          subtitle: facility,
+          icon: Icons.calendar_today_outlined,
+        ),
+        const SizedBox(height: 14),
+        _FicAvailabilityCard(
+          availabilityAsync: availabilityAsync,
+          toggleable: true,
+          isToggling: isTogglingDate,
+          onToggle: onToggleDate,
+        ),
+        const SizedBox(height: 12),
+        _FicPanel(
+          title: 'Booked Sessions',
+          child: calendarAsync.when(
+            data: (List<FicCalendarItem> calendar) {
+              if (calendar.isEmpty) {
+                return const _FicMessageRow(
+                  icon: Icons.event_busy_outlined,
+                  message: 'No scheduled sessions found.',
+                );
+              }
+              return Column(
+                children: calendar
+                    .take(20)
+                    .map(
+                      (FicCalendarItem item) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: _CalendarSessionRow(
+                          title: item.title,
+                          detail: item.detailLabel,
+                          status: item.status,
+                        ),
+                      ),
+                    )
+                    .toList(),
+              );
+            },
+            error: (Object e, _) => _FicMessageRow(
+              icon: Icons.wifi_off_rounded,
+              message: formatApiError(e, includeUri: true),
+            ),
+            loading: () => const _FicMessageRow(
+              icon: Icons.sync_rounded,
+              message: 'Loading sessions...',
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Profile tab ──────────────────────────────────────────────────────────────
+
+class _FicProfileTab extends StatelessWidget {
+  const _FicProfileTab({
+    required this.displayName,
+    required this.facility,
+    required this.email,
+    required this.role,
+    required this.authBusy,
+    required this.onLogout,
+  });
+
+  final String displayName;
+  final String facility;
+  final String email;
+  final String role;
+  final bool authBusy;
+  final VoidCallback onLogout;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(18, 6, 18, 24),
+      children: <Widget>[
+        _FicHeader(
+          label: 'FIC WORKSPACE',
+          title: displayName,
+          subtitle: facility,
+          icon: Icons.person_outline_rounded,
+        ),
+        const SizedBox(height: 14),
+        _FicPanel(
+          title: 'Account',
+          child: Column(
+            children: <Widget>[
+              _FicProfileField(label: 'Name', value: displayName),
+              const SizedBox(height: 10),
+              _FicProfileField(label: 'Assigned Facility', value: facility),
+              const SizedBox(height: 10),
+              _FicProfileField(label: 'Email', value: email),
+              const SizedBox(height: 10),
+              _FicProfileField(label: 'Role', value: role),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: authBusy ? null : onLogout,
+                  icon: const Icon(Icons.logout_rounded),
+                  label: const Text('Log out'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: TaraTheme.roseText,
+                    backgroundColor: TaraTheme.surface,
+                    side: const BorderSide(color: Color(0xFFFECDD3)),
+                    minimumSize: const Size(0, 42),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Shared card widgets ──────────────────────────────────────────────────────
+
+class _FicSessionsCard extends StatelessWidget {
+  const _FicSessionsCard({
     required this.dashboardAsync,
     required this.onViewQueue,
   });
@@ -331,24 +432,18 @@ class _FicActiveSessionsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String countLabel = dashboardAsync.when(
-      data: (FicDashboardData dashboard) =>
-          '${dashboard.activeSessions} active',
+      data: (d) => '${d.activeSessions} active',
       error: (_, _) => 'Unavailable',
-      loading: () => 'Loading',
+      loading: () => '—',
     );
     final String nextLabel = dashboardAsync.when(
-      data: (FicDashboardData dashboard) {
-        if (dashboard.nextTitle.trim().isEmpty) {
-          return 'No upcoming session found';
-        }
-        final String time = dashboard.nextTime.trim();
-        return time.isEmpty
-            ? 'Next: ${dashboard.nextTitle}'
-            : 'Next: ${dashboard.nextTitle} - $time';
+      data: (d) {
+        if (d.nextTitle.trim().isEmpty) return 'No upcoming session';
+        final String t = d.nextTime.trim();
+        return t.isEmpty ? 'Next: ${d.nextTitle}' : 'Next: ${d.nextTitle} · $t';
       },
-      error: (Object error, StackTrace stackTrace) =>
-          formatApiError(error, includeUri: true),
-      loading: () => 'Syncing dashboard...',
+      error: (e, _) => formatApiError(e, includeUri: true),
+      loading: () => 'Syncing dashboard…',
     );
 
     return Container(
@@ -383,29 +478,22 @@ class _FicActiveSessionsCard extends StatelessWidget {
             nextLabel,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Colors.white70,
-              fontSize: 11,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: Colors.white70, fontSize: 11),
           ),
           const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: <Widget>[
-              FilledButton(
-                onPressed: onViewQueue,
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(0, 34),
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  backgroundColor: TaraTheme.primary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: const Text('View queue'),
+          FilledButton(
+            onPressed: onViewQueue,
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(0, 34),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              backgroundColor: TaraTheme.primary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
-            ],
+            ),
+            child: const Text('View queue'),
           ),
         ],
       ),
@@ -413,30 +501,138 @@ class _FicActiveSessionsCard extends StatelessWidget {
   }
 }
 
-class _FicCalendarCard extends StatelessWidget {
-  const _FicCalendarCard({required this.availabilityAsync});
+class _FicStatsGrid extends StatelessWidget {
+  const _FicStatsGrid({required this.dashboardAsync});
+
+  final AsyncValue<FicDashboardData> dashboardAsync;
+
+  @override
+  Widget build(BuildContext context) {
+    final FicStats? stats = dashboardAsync.whenOrNull(data: (d) => d.stats);
+    final bool loading = dashboardAsync is AsyncLoading;
+
+    String v(int? value) => loading ? '—' : (value ?? 0).toString();
+
+    return _FicPanel(
+      title: 'Facility Summary',
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: <Widget>[
+          _FicStatChip(
+            label: 'Bookings',
+            value: v(stats?.bookingNotifications),
+          ),
+          _FicStatChip(
+            label: 'Upcoming',
+            value: v(stats?.upcomingSessions),
+          ),
+          _FicStatChip(
+            label: 'Pending',
+            value: v(stats?.pendingConfirmation),
+          ),
+          _FicStatChip(
+            label: 'Uploaded',
+            value: v(stats?.uploadedStudies),
+          ),
+          _FicStatChip(
+            label: 'Active',
+            value: v(stats?.activeStudies),
+          ),
+          _FicStatChip(
+            label: 'Responses',
+            value: v(stats?.totalResponses),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FicStatChip extends StatelessWidget {
+  const _FicStatChip({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: TaraTheme.background,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: TaraTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              height: 1,
+              color: Color(0xFF171717),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: TaraTheme.textSecondary,
+              height: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FicAvailabilityCard extends StatelessWidget {
+  const _FicAvailabilityCard({
+    required this.availabilityAsync,
+    required this.toggleable,
+    required this.isToggling,
+    required this.onToggle,
+  });
 
   final AsyncValue<List<FicAvailabilityDay>> availabilityAsync;
+  final bool toggleable;
+  final bool isToggling;
+  final Future<void> Function(FicAvailabilityDay)? onToggle;
 
   @override
   Widget build(BuildContext context) {
     return _FicPanel(
-      title: 'Availability Calendar',
+      title: toggleable ? 'My Availability' : 'Availability Calendar',
       child: availabilityAsync.when(
         data: (List<FicAvailabilityDay> availability) {
-          final List<FicAvailabilityDay> days = _visibleAvailabilityDays(
-            availability,
-          );
+          final List<FicAvailabilityDay> days = _visibleDays(availability);
           if (days.isEmpty) {
             return const _FicMessageRow(
               icon: Icons.calendar_month_outlined,
-              message: 'No availability records for this month.',
+              message: 'No availability records for this period.',
             );
           }
           return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
+              if (toggleable)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    'Tap a date to toggle your availability.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontSize: 10,
+                      color: TaraTheme.textSecondary,
+                    ),
+                  ),
+                ),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: days
                     .map(
                       (FicAvailabilityDay day) => Expanded(
@@ -444,17 +640,14 @@ class _FicCalendarCard extends StatelessWidget {
                           child: Text(
                             _weekdayLabel(day.date),
                             style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                ),
+                                ?.copyWith(fontSize: 10, fontWeight: FontWeight.w700),
                           ),
                         ),
                       ),
                     )
                     .toList(),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               Row(
                 children: days
                     .map(
@@ -464,6 +657,9 @@ class _FicCalendarCard extends StatelessWidget {
                           child: _CalendarDatePill(
                             date: day.date.toLocal().day,
                             kind: _calendarKindFor(day),
+                            onTap: (toggleable && !isToggling && onToggle != null)
+                                ? () => unawaited(onToggle!(day))
+                                : null,
                           ),
                         ),
                       ),
@@ -471,116 +667,46 @@ class _FicCalendarCard extends StatelessWidget {
                     .toList(),
               ),
               const SizedBox(height: 10),
-              const Wrap(
+              Wrap(
                 spacing: 10,
                 runSpacing: 6,
                 children: <Widget>[
-                  _CalendarLegend(label: 'Today', color: TaraTheme.primary),
-                  _CalendarLegend(label: 'Available', color: Color(0xFFB7D8A8)),
-                  _CalendarLegend(label: 'Booked', color: Color(0xFFF5BBB0)),
+                  const _CalendarLegend(
+                    label: 'Today',
+                    color: TaraTheme.primary,
+                  ),
+                  const _CalendarLegend(
+                    label: 'Available',
+                    color: Color(0xFFB7D8A8),
+                  ),
+                  const _CalendarLegend(
+                    label: 'Booked',
+                    color: Color(0xFFF5BBB0),
+                  ),
+                  if (isToggling)
+                    const _CalendarLegend(
+                      label: 'Updating…',
+                      color: Color(0xFFE5DED0),
+                    ),
                 ],
               ),
             ],
           );
         },
-        error: (Object error, StackTrace stackTrace) => _FicMessageRow(
+        error: (Object e, _) => _FicMessageRow(
           icon: Icons.wifi_off_rounded,
-          message: formatApiError(error, includeUri: true),
+          message: formatApiError(e, includeUri: true),
         ),
         loading: () => const _FicMessageRow(
           icon: Icons.sync_rounded,
-          message: 'Loading availability...',
+          message: 'Loading availability…',
         ),
       ),
     );
   }
 }
 
-class _FicStudyQueueCard extends StatelessWidget {
-  const _FicStudyQueueCard({required this.studiesAsync});
-
-  final AsyncValue<List<FicStudy>> studiesAsync;
-
-  @override
-  Widget build(BuildContext context) {
-    return _FicPanel(
-      title: 'Study Queue',
-      child: _FicStudyList(studiesAsync: studiesAsync, limit: 3),
-    );
-  }
-}
-
-class _FicQueueTab extends StatelessWidget {
-  const _FicQueueTab({required this.studiesAsync});
-
-  final AsyncValue<List<FicStudy>> studiesAsync;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        _FicPanel(
-          title: 'Queue',
-          child: _FicStudyList(studiesAsync: studiesAsync, limit: 12),
-        ),
-      ],
-    );
-  }
-}
-
-class _FicCalendarTab extends StatelessWidget {
-  const _FicCalendarTab({
-    required this.calendarAsync,
-    required this.availabilityAsync,
-  });
-
-  final AsyncValue<List<FicCalendarItem>> calendarAsync;
-  final AsyncValue<List<FicAvailabilityDay>> availabilityAsync;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        _FicCalendarCard(availabilityAsync: availabilityAsync),
-        const SizedBox(height: 12),
-        _FicPanel(
-          title: 'Upcoming Slots',
-          child: calendarAsync.when(
-            data: (List<FicCalendarItem> calendar) {
-              if (calendar.isEmpty) {
-                return const _FicMessageRow(
-                  icon: Icons.event_busy_outlined,
-                  message: 'No scheduled studies found.',
-                );
-              }
-              return Column(
-                children: calendar.take(8).map((FicCalendarItem item) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: _CalendarScheduleRow(
-                      title: item.title,
-                      detail: item.detailLabel,
-                    ),
-                  );
-                }).toList(),
-              );
-            },
-            error: (Object error, StackTrace stackTrace) => _FicMessageRow(
-              icon: Icons.wifi_off_rounded,
-              message: formatApiError(error, includeUri: true),
-            ),
-            loading: () => const _FicMessageRow(
-              icon: Icons.sync_rounded,
-              message: 'Loading calendar...',
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
+// ─── Study list ───────────────────────────────────────────────────────────────
 
 class _FicStudyList extends StatelessWidget {
   const _FicStudyList({required this.studiesAsync, required this.limit});
@@ -592,38 +718,166 @@ class _FicStudyList extends StatelessWidget {
   Widget build(BuildContext context) {
     return studiesAsync.when(
       data: (List<FicStudy> studies) {
-        final List<FicStudy> visibleStudies = studies.take(limit).toList();
-        if (visibleStudies.isEmpty) {
+        if (studies.isEmpty) {
           return const _FicMessageRow(
             icon: Icons.fact_check_outlined,
-            message: 'No FIC studies found.',
+            message: 'No studies assigned to this facility.',
           );
         }
         return Column(
-          children: visibleStudies.map((FicStudy study) {
-            final _FicStatusStyle statusStyle = _statusStyleFor(study.status);
+          children: studies.take(limit).map((FicStudy study) {
+            final _FicStatusStyle style = _statusStyleFor(study.status);
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: _StudyQueueTile(
                 study: study,
-                title: study.title,
-                detail: '${study.progressLabel} - ${study.scheduleLabel}',
                 status: _humanizeStatus(study.status),
-                statusColor: statusStyle.foreground,
-                statusTint: statusStyle.background,
-                icon: statusStyle.icon,
+                statusColor: style.foreground,
+                statusTint: style.background,
+                icon: style.icon,
               ),
             );
           }).toList(),
         );
       },
-      error: (Object error, StackTrace stackTrace) => _FicMessageRow(
+      error: (Object e, _) => _FicMessageRow(
         icon: Icons.wifi_off_rounded,
-        message: formatApiError(error, includeUri: true),
+        message: formatApiError(e, includeUri: true),
       ),
       loading: () => const _FicMessageRow(
         icon: Icons.sync_rounded,
-        message: 'Loading studies...',
+        message: 'Loading studies…',
+      ),
+    );
+  }
+}
+
+// ─── Shared small widgets ─────────────────────────────────────────────────────
+
+class _FicHeader extends StatelessWidget {
+  const _FicHeader({
+    required this.label,
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+  });
+
+  final String label;
+  final String title;
+  final String subtitle;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[Color(0xFFFB923C), TaraTheme.primaryDark],
+        ),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x28F97316),
+            blurRadius: 14,
+            offset: Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        children: <Widget>[
+          Container(
+            height: 40,
+            width: 40,
+            decoration: BoxDecoration(
+              color: const Color(0x33FFFFFF),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0x44FFFFFF)),
+            ),
+            child: Icon(icon, color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: Color(0xCCFFFFFF),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    height: 1,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    height: 1.1,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                if (subtitle.trim().isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xB3FFFFFF),
+                      fontSize: 11,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FicPanel extends StatelessWidget {
+  const _FicPanel({required this.title, required this.child});
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: TaraTheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: TaraTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            title.toUpperCase(),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              color: TaraTheme.textSecondary,
+              height: 1,
+            ),
+          ),
+          const SizedBox(height: 10),
+          child,
+        ],
       ),
     );
   }
@@ -657,102 +911,9 @@ class _FicMessageRow extends StatelessWidget {
   }
 }
 
-class _FicProfileTab extends StatelessWidget {
-  const _FicProfileTab({
-    required this.name,
-    required this.location,
-    required this.email,
-    required this.role,
-    required this.authBusy,
-    required this.onLogout,
-  });
-
-  final String name;
-  final String location;
-  final String email;
-  final String role;
-  final bool authBusy;
-  final VoidCallback onLogout;
-
-  @override
-  Widget build(BuildContext context) {
-    return _FicPanel(
-      title: 'Profile',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          _FicProfileField(label: 'Name', value: name),
-          const SizedBox(height: 10),
-          _FicProfileField(label: 'Location', value: location),
-          const SizedBox(height: 10),
-          _FicProfileField(label: 'Email', value: email),
-          const SizedBox(height: 10),
-          _FicProfileField(label: 'Role', value: role),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: authBusy ? null : onLogout,
-              icon: const Icon(Icons.logout_rounded),
-              label: const Text('Log out'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: TaraTheme.roseText,
-                backgroundColor: TaraTheme.surface,
-                side: const BorderSide(color: Color(0xFFFECDD3)),
-                minimumSize: const Size(0, 42),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FicPanel extends StatelessWidget {
-  const _FicPanel({required this.title, required this.child});
-
-  final String title;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: TaraTheme.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFD8D2C6)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            title.toUpperCase(),
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-              color: TaraTheme.textSecondary,
-              height: 1,
-            ),
-          ),
-          const SizedBox(height: 10),
-          child,
-        ],
-      ),
-    );
-  }
-}
-
 class _StudyQueueTile extends StatelessWidget {
   const _StudyQueueTile({
     required this.study,
-    required this.title,
-    required this.detail,
     required this.status,
     required this.statusColor,
     required this.statusTint,
@@ -760,8 +921,6 @@ class _StudyQueueTile extends StatelessWidget {
   });
 
   final FicStudy study;
-  final String title;
-  final String detail;
   final String status;
   final Color statusColor;
   final Color statusTint;
@@ -772,9 +931,9 @@ class _StudyQueueTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: const Color(0xFFF9F7F2),
+        color: TaraTheme.background,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE5DED0)),
+        border: Border.all(color: TaraTheme.border),
       ),
       child: Column(
         children: <Widget>[
@@ -796,7 +955,7 @@ class _StudyQueueTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Text(
-                      title,
+                      study.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -805,9 +964,9 @@ class _StudyQueueTile extends StatelessWidget {
                         height: 1.15,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Text(
-                      detail,
+                      '${study.progressLabel} · ${study.scheduleLabel}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -815,6 +974,19 @@ class _StudyQueueTile extends StatelessWidget {
                         height: 1.1,
                       ),
                     ),
+                    if (study.ownerName.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: 2),
+                      Text(
+                        study.ownerName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontSize: 9,
+                          color: TaraTheme.textSecondary,
+                          height: 1,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -842,7 +1014,15 @@ class _StudyQueueTile extends StatelessWidget {
             children: <Widget>[
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () => _openStudyForm(context, study),
+                  onPressed: () => _openForm(context, study),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 34),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    textStyle: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   child: const Text('View Form'),
                 ),
               ),
@@ -850,7 +1030,16 @@ class _StudyQueueTile extends StatelessWidget {
               Expanded(
                 child: FilledButton(
                   onPressed: () => _openAnalysis(context, study),
-                  child: const Text('View Dashboard'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, 34),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    backgroundColor: TaraTheme.primary,
+                    textStyle: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  child: const Text('Dashboard'),
                 ),
               ),
             ],
@@ -861,42 +1050,125 @@ class _StudyQueueTile extends StatelessWidget {
   }
 }
 
-class _CalendarDatePill extends StatelessWidget {
-  const _CalendarDatePill({required this.date, required this.kind});
+class _CalendarSessionRow extends StatelessWidget {
+  const _CalendarSessionRow({
+    required this.title,
+    required this.detail,
+    required this.status,
+  });
 
-  final int date;
-  final _CalendarKind kind;
+  final String title;
+  final String detail;
+  final String status;
 
   @override
   Widget build(BuildContext context) {
-    Color background;
-    Color foreground;
+    final bool confirmed = status.toUpperCase().contains('CONFIRM');
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: TaraTheme.background,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: TaraTheme.border),
+      ),
+      child: Row(
+        children: <Widget>[
+          const Icon(
+            Icons.calendar_today_outlined,
+            size: 14,
+            color: TaraTheme.primaryDark,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  detail,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(fontSize: 10),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+            decoration: BoxDecoration(
+              color: confirmed
+                  ? const Color(0xFFEAF8D9)
+                  : const Color(0xFFFFF9C4),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              confirmed ? 'Confirmed' : 'Pending',
+              style: TextStyle(
+                fontSize: 8,
+                fontWeight: FontWeight.w800,
+                height: 1,
+                color: confirmed ? TaraTheme.mintText : const Color(0xFF92400E),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CalendarDatePill extends StatelessWidget {
+  const _CalendarDatePill({
+    required this.date,
+    required this.kind,
+    this.onTap,
+  });
+
+  final int date;
+  final _CalendarKind kind;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    Color bg;
+    Color fg;
     switch (kind) {
       case _CalendarKind.today:
-        background = TaraTheme.primary;
-        foreground = Colors.white;
+        bg = TaraTheme.primary;
+        fg = Colors.white;
       case _CalendarKind.available:
-        background = const Color(0xFFDCEAD0);
-        foreground = TaraTheme.mintText;
+        bg = const Color(0xFFDCEAD0);
+        fg = TaraTheme.mintText;
       case _CalendarKind.booked:
-        background = const Color(0xFFF6D5CC);
-        foreground = TaraTheme.roseText;
+        bg = const Color(0xFFF6D5CC);
+        fg = TaraTheme.roseText;
       case _CalendarKind.idle:
-        background = Colors.transparent;
-        foreground = TaraTheme.textSecondary;
+        bg = Colors.transparent;
+        fg = TaraTheme.textSecondary;
     }
 
-    return Container(
-      height: 24,
+    final Widget pill = Container(
+      height: 28,
       decoration: BoxDecoration(
-        color: background,
+        color: bg,
         borderRadius: BorderRadius.circular(7),
       ),
       child: Center(
         child: Text(
           '$date',
           style: TextStyle(
-            color: foreground,
+            color: fg,
             fontSize: 10,
             fontWeight: FontWeight.w800,
             height: 1,
@@ -904,6 +1176,9 @@ class _CalendarDatePill extends StatelessWidget {
         ),
       ),
     );
+
+    if (onTap == null) return pill;
+    return GestureDetector(onTap: onTap, child: pill);
   }
 }
 
@@ -938,59 +1213,6 @@ class _CalendarLegend extends StatelessWidget {
   }
 }
 
-class _CalendarScheduleRow extends StatelessWidget {
-  const _CalendarScheduleRow({required this.title, required this.detail});
-
-  final String title;
-  final String detail;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF9F7F2),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE5DED0)),
-      ),
-      child: Row(
-        children: <Widget>[
-          const Icon(
-            Icons.calendar_today_outlined,
-            size: 15,
-            color: TaraTheme.primaryDark,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  detail,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(fontSize: 10),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _FicProfileField extends StatelessWidget {
   const _FicProfileField({required this.label, required this.value});
 
@@ -1000,41 +1222,30 @@ class _FicProfileField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TextFormField(
-      initialValue: value.isEmpty ? '-' : value,
+      initialValue: value.isEmpty ? '—' : value,
       readOnly: true,
-      decoration: InputDecoration(
-        labelText: label,
-        filled: true,
-        fillColor: const Color(0xFFF9F7F2),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 14,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFFE5DED0)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFFE5DED0)),
-        ),
-      ),
+      decoration: InputDecoration(labelText: label),
     );
   }
 }
 
-class _FicBottomNav extends StatelessWidget {
-  const _FicBottomNav({required this.currentView, required this.onChanged});
+// ─── Bottom nav ───────────────────────────────────────────────────────────────
 
-  final _FicView currentView;
-  final ValueChanged<_FicView> onChanged;
+class _FicBottomNav extends StatelessWidget {
+  const _FicBottomNav({
+    required this.currentIndex,
+    required this.onChanged,
+  });
+
+  final int currentIndex;
+  final ValueChanged<int> onChanged;
 
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: const BoxDecoration(
         color: TaraTheme.surface,
-        border: Border(top: BorderSide(color: Color(0xFFE5DED0))),
+        border: Border(top: BorderSide(color: TaraTheme.border)),
       ),
       child: SafeArea(
         top: false,
@@ -1045,26 +1256,26 @@ class _FicBottomNav extends StatelessWidget {
               _FicNavItem(
                 icon: Icons.widgets_outlined,
                 label: 'Dashboard',
-                selected: currentView == _FicView.dashboard,
-                onTap: () => onChanged(_FicView.dashboard),
+                selected: currentIndex == 0,
+                onTap: () => onChanged(0),
               ),
               _FicNavItem(
                 icon: Icons.format_list_bulleted_rounded,
                 label: 'Queue',
-                selected: currentView == _FicView.queue,
-                onTap: () => onChanged(_FicView.queue),
+                selected: currentIndex == 1,
+                onTap: () => onChanged(1),
               ),
               _FicNavItem(
                 icon: Icons.calendar_today_outlined,
                 label: 'Calendar',
-                selected: currentView == _FicView.calendar,
-                onTap: () => onChanged(_FicView.calendar),
+                selected: currentIndex == 2,
+                onTap: () => onChanged(2),
               ),
               _FicNavItem(
                 icon: Icons.person_outline_rounded,
                 label: 'Profile',
-                selected: currentView == _FicView.profile,
-                onTap: () => onChanged(_FicView.profile),
+                selected: currentIndex == 3,
+                onTap: () => onChanged(3),
               ),
             ],
           ),
@@ -1098,7 +1309,7 @@ class _FicNavItem extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               Icon(icon, color: color, size: 18),
-              const SizedBox(height: 4),
+              const SizedBox(height: 3),
               Text(
                 label,
                 maxLines: 1,
@@ -1118,6 +1329,8 @@ class _FicNavItem extends StatelessWidget {
   }
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 enum _CalendarKind { today, available, booked, idle }
 
 class _FicStatusStyle {
@@ -1133,17 +1346,15 @@ class _FicStatusStyle {
 }
 
 _FicStatusStyle _statusStyleFor(String status) {
-  final String normalized = status.trim().toUpperCase();
-  if (normalized.contains('PROGRESS') ||
-      normalized.contains('LIVE') ||
-      normalized.contains('ACTIVE')) {
+  final String s = status.trim().toUpperCase();
+  if (s.contains('PROGRESS') || s.contains('LIVE') || s.contains('ACTIVE')) {
     return const _FicStatusStyle(
       foreground: TaraTheme.primaryDark,
       background: TaraTheme.primaryTint,
       icon: Icons.groups_2_outlined,
     );
   }
-  if (normalized.contains('COMPLETE') || normalized.contains('DONE')) {
+  if (s.contains('COMPLETE') || s.contains('DONE')) {
     return const _FicStatusStyle(
       foreground: TaraTheme.mintText,
       background: Color(0xFFEAF8D9),
@@ -1165,34 +1376,23 @@ _CalendarKind _calendarKindFor(FicAvailabilityDay day) {
       local.day == now.day) {
     return _CalendarKind.today;
   }
-  if (day.booked) {
-    return _CalendarKind.booked;
-  }
-  if (day.available) {
-    return _CalendarKind.available;
-  }
+  if (day.booked) return _CalendarKind.booked;
+  if (day.available) return _CalendarKind.available;
   return _CalendarKind.idle;
 }
 
-List<FicAvailabilityDay> _visibleAvailabilityDays(
-  List<FicAvailabilityDay> availability,
-) {
-  if (availability.isEmpty) {
-    return <FicAvailabilityDay>[];
-  }
+List<FicAvailabilityDay> _visibleDays(List<FicAvailabilityDay> all) {
+  if (all.isEmpty) return <FicAvailabilityDay>[];
   final DateTime now = DateTime.now();
-  final List<FicAvailabilityDay> upcoming = availability
-      .where((FicAvailabilityDay day) {
-        final DateTime local = day.date.toLocal();
-        return !DateTime(
-          local.year,
-          local.month,
-          local.day,
-        ).isBefore(DateTime(now.year, now.month, now.day));
+  final DateTime today = DateTime(now.year, now.month, now.day);
+  final List<FicAvailabilityDay> upcoming = all
+      .where((FicAvailabilityDay d) {
+        final DateTime local = d.date.toLocal();
+        return !DateTime(local.year, local.month, local.day).isBefore(today);
       })
       .take(7)
       .toList();
-  return upcoming.isNotEmpty ? upcoming : availability.take(7).toList();
+  return upcoming.isNotEmpty ? upcoming : all.take(7).toList();
 }
 
 String _weekdayLabel(DateTime value) {
@@ -1202,42 +1402,19 @@ String _weekdayLabel(DateTime value) {
 
 String _humanizeStatus(String value) {
   final String normalized = value.trim();
-  if (normalized.isEmpty) {
-    return 'Upcoming';
-  }
+  if (normalized.isEmpty) return 'Upcoming';
   return normalized
       .replaceAll('_', ' ')
       .toLowerCase()
       .split(RegExp(r'\s+'))
-      .where((String part) => part.isNotEmpty)
-      .map(
-        (String part) =>
-            '${part.substring(0, 1).toUpperCase()}${part.substring(1)}',
-      )
+      .where((String p) => p.isNotEmpty)
+      .map((String p) => '${p[0].toUpperCase()}${p.substring(1)}')
       .join(' ');
 }
 
-String _ficInitials(String value) {
-  final List<String> parts = value
-      .trim()
-      .split(RegExp(r'\s+'))
-      .where((String part) => part.isNotEmpty)
-      .toList();
-  if (parts.isEmpty) {
-    return 'FC';
-  }
-  if (parts.length == 1) {
-    return parts.first.substring(0, 1).toUpperCase();
-  }
-  return '${parts.first.substring(0, 1)}${parts.last.substring(0, 1)}'
-      .toUpperCase();
-}
 
-void _openStudyForm(BuildContext context, FicStudy study) {
-  context.push(
-    '/fic/studies/${Uri.encodeComponent(study.id)}/form',
-    extra: study,
-  );
+void _openForm(BuildContext context, FicStudy study) {
+  context.push('/fic/studies/${Uri.encodeComponent(study.id)}/form', extra: study);
 }
 
 void _openAnalysis(BuildContext context, FicStudy study) {

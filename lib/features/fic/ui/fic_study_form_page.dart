@@ -1,4 +1,8 @@
+import 'dart:ui' as ui;
+
+import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:tarasense_mobile/core/config/app_config.dart';
@@ -39,6 +43,7 @@ class FicStudyFormPage extends StatelessWidget {
               study: study,
             );
             final Widget qrPanel = _StudyQrPanel(
+              title: title,
               registrationUrl: registrationUrl,
             );
 
@@ -183,10 +188,68 @@ class _ScoreSheetPanel extends StatelessWidget {
   }
 }
 
-class _StudyQrPanel extends StatelessWidget {
-  const _StudyQrPanel({required this.registrationUrl});
+class _StudyQrPanel extends StatefulWidget {
+  const _StudyQrPanel({required this.title, required this.registrationUrl});
 
+  final String title;
   final String registrationUrl;
+
+  @override
+  State<_StudyQrPanel> createState() => _StudyQrPanelState();
+}
+
+class _StudyQrPanelState extends State<_StudyQrPanel> {
+  bool _isDownloading = false;
+
+  Future<void> _downloadQrCode() async {
+    if (_isDownloading) return;
+    setState(() => _isDownloading = true);
+    try {
+      final QrPainter painter = QrPainter(
+        data: widget.registrationUrl,
+        version: QrVersions.auto,
+        gapless: true,
+        eyeStyle: const QrEyeStyle(
+          eyeShape: QrEyeShape.square,
+          color: Color(0xFF000000),
+        ),
+        dataModuleStyle: const QrDataModuleStyle(
+          dataModuleShape: QrDataModuleShape.square,
+          color: Color(0xFF000000),
+        ),
+      );
+      final ByteData? byteData = await painter.toImageData(
+        1024,
+        format: ui.ImageByteFormat.png,
+      );
+      if (byteData == null) throw StateError('QR image could not be generated.');
+      await FileSaver.instance.saveFile(
+        name: '${_fileSafeName(widget.title)}-qr-code',
+        bytes: byteData.buffer.asUint8List(),
+        fileExtension: 'png',
+        mimeType: MimeType.png,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('QR code downloaded.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not download QR code: $error')),
+      );
+    } finally {
+      if (mounted) setState(() => _isDownloading = false);
+    }
+  }
+
+  Future<void> _copyLink() async {
+    await Clipboard.setData(ClipboardData(text: widget.registrationUrl));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Registration link copied.')),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -221,25 +284,57 @@ class _StudyQrPanel extends StatelessWidget {
                 border: Border.all(color: TaraTheme.border),
               ),
               child: QrImageView(
-                data: registrationUrl,
+                data: widget.registrationUrl,
                 version: QrVersions.auto,
                 backgroundColor: Colors.white,
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           Text(
-            registrationUrl,
+            widget.registrationUrl,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: TaraTheme.textSecondary,
               fontSize: 11,
               fontWeight: FontWeight.w700,
             ),
           ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: <Widget>[
+              FilledButton.icon(
+                onPressed: _isDownloading ? null : _downloadQrCode,
+                icon: _isDownloading
+                    ? const SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.download_rounded),
+                label: const Text('Download QR Code'),
+              ),
+              OutlinedButton.icon(
+                onPressed: _copyLink,
+                icon: const Icon(Icons.link_rounded),
+                label: const Text('Copy Link'),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
+}
+
+String _fileSafeName(String value) {
+  final String normalized = value
+      .trim()
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+      .replaceAll(RegExp(r'^-+|-+$'), '');
+  return normalized.isEmpty ? 'study' : normalized;
 }
 
 class _Panel extends StatelessWidget {
