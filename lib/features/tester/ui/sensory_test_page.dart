@@ -61,6 +61,7 @@ class _SensoryTestPageState extends ConsumerState<SensoryTestPage> {
         stage: 'Evaluation',
         status: 'AVAILABLE',
         session: 'Schedule to be announced | Testing site',
+        schedules: const <StudyScheduleSlot>[],
         selected: 0,
         capacity: 0,
         sampleCount: 1,
@@ -156,8 +157,7 @@ class _SensoryTestPageState extends ConsumerState<SensoryTestPage> {
   }
 
   Future<void> _loadTestDefinition() async {
-    final String participantId = _effectiveParticipantId;
-    if (widget.studyId.trim().isEmpty || participantId.isEmpty) {
+    if (widget.studyId.trim().isEmpty) {
       return;
     }
     final String accessToken =
@@ -172,11 +172,7 @@ class _SensoryTestPageState extends ConsumerState<SensoryTestPage> {
     try {
       final ConsumerStudy study = await ref
           .read(consumerStudiesApiProvider)
-          .fetchStudyTest(
-            accessToken,
-            studyId: widget.studyId,
-            participantId: participantId,
-          );
+          .fetchStudyForm(accessToken, studyId: widget.studyId);
       if (!mounted) {
         return;
       }
@@ -826,21 +822,30 @@ class _SampleQuestionPanel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          ...options.map(
-            (_ScaleOption option) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: _ScaleButton(
-                option: option,
-                selected: _isSelectedScaleValue(
-                  selectedValue,
-                  option.value,
-                  jar: question.isJar,
-                ),
-                onTap: () => onSelected(
-                  question.isJar ? _jarValue(option.value) : option.value,
-                ),
-              ),
-            ),
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 3,
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            childAspectRatio: 0.88,
+            children: options
+                .map(
+                  (_ScaleOption option) => _ScaleButton(
+                    option: option,
+                    selected: _isSelectedScaleValue(
+                      selectedValue,
+                      option.value,
+                      jar: question.isJar,
+                    ),
+                    onTap: () => onSelected(
+                      question.isJar
+                          ? _jarValue(option.value)
+                          : option.value,
+                    ),
+                  ),
+                )
+                .toList(),
           ),
           if (validationMessage != null) ...<Widget>[
             const SizedBox(height: 4),
@@ -1222,27 +1227,27 @@ class _ScaleButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(14),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
         decoration: BoxDecoration(
           color: selected ? TaraTheme.primaryTint : const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: selected ? TaraTheme.primary : TaraTheme.border,
             width: selected ? 1.5 : 1,
           ),
         ),
-        child: Row(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             Container(
-              height: 28,
-              width: 28,
+              height: 34,
+              width: 34,
               decoration: BoxDecoration(
                 color: selected ? TaraTheme.primary : TaraTheme.border,
-                borderRadius: BorderRadius.circular(7),
+                borderRadius: BorderRadius.circular(9),
               ),
               child: Center(
                 child: Text(
@@ -1250,31 +1255,28 @@ class _ScaleButton extends StatelessWidget {
                   style: TextStyle(
                     color: selected ? Colors.white : TaraTheme.textSecondary,
                     fontWeight: FontWeight.w900,
-                    fontSize: 12,
+                    fontSize: 15,
                     height: 1,
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                option.label,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: selected
-                      ? TaraTheme.primaryDark
-                      : TaraTheme.textPrimary,
-                  fontWeight:
-                      selected ? FontWeight.w700 : FontWeight.w500,
-                ),
+            const SizedBox(height: 7),
+            Text(
+              option.label,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: selected
+                    ? TaraTheme.primaryDark
+                    : TaraTheme.textPrimary,
+                fontWeight:
+                    selected ? FontWeight.w700 : FontWeight.w500,
+                fontSize: 10,
+                height: 1.3,
               ),
             ),
-            if (selected)
-              const Icon(
-                Icons.check_circle_rounded,
-                color: TaraTheme.primary,
-                size: 18,
-              ),
           ],
         ),
       ),

@@ -70,14 +70,19 @@ class ApiClient {
     String? bearerToken,
     Object? data,
     Map<String, dynamic>? queryParameters,
+    ValidateStatus? validateStatus,
   }) async {
-    final response = await _dio.post<Map<String, dynamic>>(
+    final response = await _dio.post<dynamic>(
       path,
       data: data,
       queryParameters: queryParameters,
-      options: _optionsForToken(bearerToken),
+      options: _optionsForToken(bearerToken, validateStatus: validateStatus),
     );
-    return response.data ?? <String, dynamic>{};
+    final dynamic body = response.data;
+    if (body is Map) {
+      return Map<String, dynamic>.from(body);
+    }
+    return <String, dynamic>{};
   }
 
   Future<Map<String, dynamic>> putJson(

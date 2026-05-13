@@ -18,6 +18,9 @@ import 'package:tarasense_mobile/features/msme/ui/msme_study_detail_page.dart';
 import 'package:tarasense_mobile/features/msme/ui/msme_workspace_page.dart';
 import 'package:tarasense_mobile/features/splash/ui/splash_page.dart';
 import 'package:tarasense_mobile/features/tester/domain/consumer_study.dart';
+import 'package:tarasense_mobile/features/tester/ui/consumer_consent_page.dart';
+import 'package:tarasense_mobile/features/tester/ui/consumer_panel_entry_page.dart';
+import 'package:tarasense_mobile/features/tester/ui/consumer_study_detail_page.dart';
 import 'package:tarasense_mobile/features/tester/ui/sensory_test_page.dart';
 import 'package:tarasense_mobile/features/tester/ui/tester_workspace_page.dart';
 
@@ -74,6 +77,39 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/consumer',
         builder: (context, state) => const TesterWorkspacePage(),
+      ),
+      GoRoute(
+        path: '/consumer/studies/:studyId',
+        builder: (context, state) => ConsumerStudyDetailPage(
+          studyId: state.pathParameters['studyId'] ?? '',
+          study: state.extra is ConsumerStudy
+              ? state.extra! as ConsumerStudy
+              : null,
+        ),
+      ),
+      GoRoute(
+        path: '/consumer/studies/:studyId/panel-entry',
+        builder: (context, state) => ConsumerPanelEntryPage(
+          studyId: state.pathParameters['studyId'] ?? '',
+          study: state.extra is ConsumerStudy
+              ? state.extra! as ConsumerStudy
+              : null,
+        ),
+      ),
+      GoRoute(
+        path: '/consumer/studies/:studyId/consent',
+        builder: (context, state) {
+          final String studyId = state.pathParameters['studyId'] ?? '';
+          final ConsumerConsentArgs? args = state.extra is ConsumerConsentArgs
+              ? state.extra! as ConsumerConsentArgs
+              : null;
+          return ConsumerConsentPage(
+            studyId: studyId,
+            participantId: args?.participantId ?? '',
+            study: args?.study,
+            panelistNumber: args?.panelistNumber,
+          );
+        },
       ),
       GoRoute(
         path: '/consumer/studies/:studyId/test',
@@ -168,5 +204,6 @@ bool _isProtectedPath(String path) {
       path == '/api-test' ||
       path.startsWith('/msme/studies/') ||
       path.startsWith('/fic/studies/') ||
-      path.startsWith('/consumer/studies/');
+      path.startsWith('/consumer/studies/') ||
+      path.startsWith('/consumer/studies');
 }

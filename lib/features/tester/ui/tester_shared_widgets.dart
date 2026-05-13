@@ -311,13 +311,10 @@ class _ConsumerStudyListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String encodedStudyId = Uri.encodeComponent(study.id);
-    final String encodedParticipantId = Uri.encodeComponent(
-      study.participantId,
+    void openStudy() => context.push(
+      '/consumer/studies/$encodedStudyId',
+      extra: study,
     );
-    final String testPath = encodedParticipantId.isEmpty
-        ? '/consumer/studies/$encodedStudyId/test'
-        : '/consumer/studies/$encodedStudyId/participants/$encodedParticipantId/test';
-    void openStudy() => context.push(testPath, extra: study);
 
     return InkWell(
       onTap: study.id.trim().isEmpty ? null : openStudy,

@@ -7,6 +7,7 @@ class ConsumerStudy {
     required this.stage,
     required this.status,
     required this.session,
+    required this.schedules,
     required this.selected,
     required this.capacity,
     required this.sampleCount,
@@ -24,6 +25,7 @@ class ConsumerStudy {
   final String stage;
   final String status;
   final String session;
+  final List<StudyScheduleSlot> schedules;
   final int selected;
   final int capacity;
   final int sampleCount;
@@ -100,9 +102,42 @@ class ConsumerStudy {
       'Untitled study',
     ]);
 
+    final int computedSelected = _firstPositiveInt(<int>[
+      reservedCount,
+      _firstInt(json, const <String>[
+        'selected',
+        'selectedCount',
+        'participantCount',
+        'registeredCount',
+        'joinedCount',
+        'responseCount',
+      ]),
+    ]);
+
+    // Ensure slot reserved counts are consistent with study-level participant count.
+    // When a single slot carries no reserved data, propagate the study's selected count.
+    List<StudyScheduleSlot> computedSchedules = _parseScheduleSlotsFromStudy(json);
+    if (computedSchedules.length == 1 &&
+        computedSchedules.first.reserved == 0 &&
+        computedSelected > 0) {
+      final StudyScheduleSlot s = computedSchedules.first;
+      computedSchedules = <StudyScheduleSlot>[
+        StudyScheduleSlot(
+          id: s.id,
+          label: s.label,
+          startTime: s.startTime,
+          endTime: s.endTime,
+          capacity: s.capacity,
+          reserved: computedSelected,
+          location: s.location,
+        ),
+      ];
+    }
+
     return ConsumerStudy(
       id: _firstString(json, const <String>['id', 'studyId', '_id']),
       title: title,
+      schedules: computedSchedules,
       owner: _firstNonEmptyString(<String>[
         _firstString(json, const <String>[
           'ownerName',
@@ -141,17 +176,7 @@ class ConsumerStudy {
         'AVAILABLE',
       ]).toUpperCase(),
       session: _sessionLabel(json, sessionMap),
-      selected: _firstPositiveInt(<int>[
-        reservedCount,
-        _firstInt(json, const <String>[
-          'selected',
-          'selectedCount',
-          'participantCount',
-          'registeredCount',
-          'joinedCount',
-          'responseCount',
-        ]),
-      ]),
+      selected: computedSelected,
       capacity: _firstPositiveInt(<int>[
         if (remainingCount > 0) reservedCount + remainingCount,
         slotCapacity,
@@ -292,7 +317,143 @@ class ConsumerStudyAttribute {
         ]),
         'ATTRIBUTE_LIKING',
       ]),
-      jarOptions: _parseStringList(json['jarOptions'] ?? json['options']),
+      jarOptions: _parseJarOptions(json['jarOptions'] ?? json['options']),
+    );
+  }
+}
+
+// ─── Schedule slot ────────────────────────────────────────────────────────────
+
+class StudyScheduleSlot {
+  const StudyScheduleSlot({
+    required this.id,
+    required this.label,
+    this.startTime,
+    this.endTime,
+    required this.capacity,
+    required this.reserved,
+    required this.location,
+  });
+
+  final String id;
+  final String label;
+  final DateTime? startTime;
+  final DateTime? endTime;
+  final int capacity;
+  final int reserved;
+  final String location;
+
+  int get slotsLeft => (capacity - reserved).clamp(0, 9999);
+  bool get isFull => slotsLeft <= 0;
+
+  factory StudyScheduleSlot.fromJson(Map<String, dynamic> json) {
+    final int cap = _firstInt(json, const <String>[
+      'capacity',
+      'maxParticipants',
+      'slotCapacity',
+    ]);
+    final int res = _firstInt(json, const <String>[
+      'reserved',
+      'reservedCount',
+      'participantCount',
+      'selectedCount',
+      'registered',
+    ]);
+    return StudyScheduleSlot(
+      id: _firstString(json, const <String>['id', 'slotId', '_id']),
+      label: _firstNonEmptyString(<String>[
+        _firstString(json, const <String>[
+          'label',
+          'title',
+          'name',
+          'sessionLabel',
+          'scheduleLabel',
+        ]),
+        _formatDateLabel(
+          _firstString(json, const <String>[
+            'date',
+            'scheduledDate',
+            'startDate',
+            'scheduledAt',
+            'startsAt',
+          ]),
+        ),
+        'Unscheduled slot',
+      ]),
+      startTime: _asDateTime(
+        json['startTime'] ?? json['startsAt'] ?? json['scheduledAt'],
+      ),
+      endTime: _asDateTime(json['endTime'] ?? json['endsAt']),
+      capacity: cap > 0 ? cap : 35,
+      reserved: res,
+      location: _firstString(json, const <String>[
+        'location',
+        'facility',
+        'facilityName',
+        'venue',
+        'site',
+      ]),
+    );
+  }
+}
+
+List<StudyScheduleSlot> parseStudyScheduleSlots(dynamic value) {
+  final List<dynamic> raw = value is List
+      ? value
+      : (_asMap(value)['slots'] ??
+                _asMap(value)['schedules'] ??
+                _asMap(value)['sessions'] ??
+                _asMap(value)['data'] ??
+                <dynamic>[])
+            as List<dynamic>;
+  return raw
+      .whereType<Map>()
+      .map(
+        (Map item) =>
+            StudyScheduleSlot.fromJson(Map<String, dynamic>.from(item)),
+      )
+      .toList();
+}
+
+// ─── Join result ──────────────────────────────────────────────────────────────
+
+class ConsumerJoinResult {
+  const ConsumerJoinResult({
+    required this.participantId,
+    required this.panelistNumber,
+    required this.status,
+    this.randomizeCode,
+  });
+
+  final String participantId;
+  final int panelistNumber;
+  final String status;
+  final String? randomizeCode;
+
+  factory ConsumerJoinResult.fromJson(Map<String, dynamic> json) {
+    final Map<String, dynamic> participant =
+        _asMap(json['participant'] ?? json['data'] ?? json);
+    return ConsumerJoinResult(
+      participantId: _firstNonEmptyString(<String>[
+        _firstString(participant, const <String>['id', 'participantId', '_id']),
+        _firstString(json, const <String>['participantId', 'id']),
+      ]),
+      panelistNumber: _firstPositiveInt(<int>[
+        _firstInt(participant, const <String>['panelistNumber', 'panelNumber']),
+        _firstInt(json, const <String>['panelistNumber', 'panelNumber']),
+      ]),
+      status: _firstNonEmptyString(<String>[
+        _firstString(participant, const <String>['status']),
+        _firstString(json, const <String>['status']),
+        'REGISTERED',
+      ]),
+      randomizeCode: () {
+        final String rc = _firstString(
+          participant,
+          const <String>['randomizeCode', 'randomCode', 'sampleCode'],
+        );
+        return rc.isNotEmpty ? rc : null;
+      }(),
     );
   }
 }
@@ -320,7 +481,7 @@ Map<String, dynamic> _singleStudyMapFrom(dynamic value) {
   if (map.isEmpty) {
     return <String, dynamic>{};
   }
-  for (final String key in const <String>['study', 'data', 'item', 'result']) {
+  for (final String key in const <String>['study', 'form', 'data', 'item', 'result']) {
     final Map<String, dynamic> nested = _asMap(map[key]);
     if (nested.isEmpty) {
       continue;
@@ -668,6 +829,39 @@ Map<String, dynamic> _scheduleMapFromStudy(Map<String, dynamic> json) {
   return <String, dynamic>{};
 }
 
+List<StudyScheduleSlot> _parseScheduleSlotsFromStudy(Map<String, dynamic> json) {
+  for (final dynamic source in <dynamic>[
+    json['sessionSchedule'],
+    json['session_schedule'],
+    json['sessionSlots'],
+    json['session_slots'],
+    json['sessions'],
+    json['studySessions'],
+    json['study_sessions'],
+    json['availableSessions'],
+    json['available_sessions'],
+    json['testingSessions'],
+    json['testing_sessions'],
+    json['testingSlots'],
+    json['testing_slots'],
+    json['slots'],
+  ]) {
+    if (source is List && source.isNotEmpty) {
+      return parseStudyScheduleSlots(source);
+    }
+    if (source is Map) {
+      final Map<String, dynamic> m = Map<String, dynamic>.from(source);
+      for (final String key in const <String>['slots', 'sessions', 'items', 'data']) {
+        final dynamic nested = m[key];
+        if (nested is List && nested.isNotEmpty) {
+          return parseStudyScheduleSlots(nested);
+        }
+      }
+    }
+  }
+  return <StudyScheduleSlot>[];
+}
+
 Map<String, dynamic> _scheduleMapFrom(dynamic value) {
   if (value is List) {
     return _firstMap(value);
@@ -892,11 +1086,32 @@ List<String> _openEndedQuestions(dynamic value) {
       .toList();
 }
 
-List<String> _parseStringList(dynamic value) {
-  return (value as List<dynamic>? ?? <dynamic>[])
-      .map((dynamic item) => item.toString())
-      .where((String item) => item.trim().isNotEmpty)
-      .toList();
+List<String> _parseJarOptions(dynamic value) {
+  if (value is List) {
+    return (value)
+        .map((dynamic item) => item.toString())
+        .where((String item) => item.trim().isNotEmpty)
+        .toList();
+  }
+  if (value is Map) {
+    final String low = value['low']?.toString().trim() ?? '';
+    final String mid = value['mid']?.toString().trim() ?? '';
+    final String high = value['high']?.toString().trim() ?? '';
+    if (low.isNotEmpty || mid.isNotEmpty || high.isNotEmpty) {
+      return <String>[
+        low.isNotEmpty ? 'Much $low' : 'Much Too Low',
+        low.isNotEmpty ? 'Slightly $low' : 'Slightly Too Low',
+        mid.isNotEmpty ? mid : 'Just About Right',
+        high.isNotEmpty ? 'Slightly $high' : 'Slightly Too High',
+        high.isNotEmpty ? 'Much $high' : 'Much Too High',
+      ];
+    }
+    return value.values
+        .map((dynamic v) => v.toString())
+        .where((String s) => s.trim().isNotEmpty)
+        .toList();
+  }
+  return <String>[];
 }
 
 int? _asIntOrNull(dynamic value) {

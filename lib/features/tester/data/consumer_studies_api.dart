@@ -28,6 +28,17 @@ class ConsumerStudiesApi {
     return parseConsumerStudy(response);
   }
 
+  Future<ConsumerStudy> fetchStudyForm(
+    String accessToken, {
+    required String studyId,
+  }) async {
+    final response = await _client.getData(
+      '/consumer/studies/${Uri.encodeComponent(studyId)}/form',
+      bearerToken: accessToken,
+    );
+    return parseConsumerStudy(response);
+  }
+
   Future<ConsumerStudyResponseSubmission> submitStudyResponse(
     String accessToken, {
     required String studyId,
@@ -40,6 +51,58 @@ class ConsumerStudiesApi {
       data: payload,
     );
     return ConsumerStudyResponseSubmission.fromJson(response);
+  }
+
+  Future<ConsumerJoinResult> joinStudy(
+    String accessToken, {
+    required String studyId,
+    String? requestedSessionAt,
+  }) async {
+    final response = await _client.postJson(
+      '/consumer/studies/${Uri.encodeComponent(studyId)}/join',
+      bearerToken: accessToken,
+      data: <String, dynamic>{
+        if (requestedSessionAt != null && requestedSessionAt.trim().isNotEmpty)
+          'requestedSessionAt': requestedSessionAt,
+      },
+      validateStatus: (int? status) =>
+          status != null && (status < 400 || status == 400),
+    );
+    if (_isMobileRouteNotFound(response)) {
+      throw const FormatException(
+        'The join endpoint is not yet available on this server.',
+      );
+    }
+    if (_isAlreadyJoinedError(response)) {
+      throw const StudyAlreadyJoinedException();
+    }
+    return ConsumerJoinResult.fromJson(response);
+  }
+
+  Future<ConsumerStudyParticipation> lookupParticipantByPanelNumber(
+    String accessToken, {
+    required String studyId,
+    required int panelistNumber,
+  }) async {
+    final response = await _client.getData(
+      '/consumer/studies/${Uri.encodeComponent(studyId)}/participants/lookup',
+      bearerToken: accessToken,
+      queryParameters: <String, dynamic>{'panelistNumber': panelistNumber},
+      validateStatus: (int? status) =>
+          status != null && (status < 400 || status == 404),
+    );
+    if (_isMobileRouteNotFound(response)) {
+      throw const FormatException(
+        'Panel number lookup is not yet available on this server.',
+      );
+    }
+    final dynamic raw = response is Map
+        ? (response['participant'] ?? response['data'] ?? response)
+        : response;
+    final Map<String, dynamic> map = raw is Map
+        ? Map<String, dynamic>.from(raw)
+        : <String, dynamic>{};
+    return ConsumerStudyParticipation.fromJson(map);
   }
 
   Future<List<ConsumerStudy>> fetchCompletedStudies(
@@ -67,14 +130,24 @@ class ConsumerStudiesApi {
 }
 
 bool _isMobileRouteNotFound(dynamic response) {
-  if (response is! Map) {
-    return false;
-  }
+  if (response is! Map) return false;
   final dynamic error = response['error'];
-  if (error is! Map) {
-    return false;
-  }
+  if (error is! Map) return false;
   return error['code']?.toString() == 'NOT_FOUND';
+}
+
+bool _isAlreadyJoinedError(dynamic response) {
+  if (response is! Map) return false;
+  final dynamic error = response['error'];
+  if (error is! Map) return false;
+  return error['code']?.toString() == 'JOIN_STUDY_FAILED';
+}
+
+class StudyAlreadyJoinedException implements Exception {
+  const StudyAlreadyJoinedException();
+
+  @override
+  String toString() => 'You have already joined this study.';
 }
 
 final consumerStudiesApiProvider = Provider<ConsumerStudiesApi>((ref) {
