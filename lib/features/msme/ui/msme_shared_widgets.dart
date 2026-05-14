@@ -835,9 +835,11 @@ class _SelectionSection extends StatelessWidget {
     required this.options,
     required this.selectedValues,
     required this.onChanged,
+    this.subtitle,
   });
 
   final String title;
+  final String? subtitle;
   final List<SelectOption> options;
   final Set<String> selectedValues;
   final void Function(String value, bool selected) onChanged;
@@ -846,28 +848,64 @@ class _SelectionSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return _SectionCard(
       title: title,
-      subtitle: 'Tap each option to keep your panelist profile accurate.',
-      child: Wrap(
-        spacing: 10,
-        runSpacing: 10,
-        children: options
-            .map(
-              (SelectOption option) => FilterChip(
-                label: Text(option.label),
-                selected: selectedValues.contains(option.value),
-                onSelected: (bool selected) =>
-                    onChanged(option.value, selected),
-                selectedColor: TaraTheme.primarySoft,
-                side: const BorderSide(color: TaraTheme.border),
-                labelStyle: TextStyle(
-                  color: selectedValues.contains(option.value)
-                      ? TaraTheme.primaryDark
-                      : TaraTheme.textPrimary,
-                  fontWeight: FontWeight.w700,
+      subtitle: subtitle ?? 'Tap each option to keep your panelist profile accurate.',
+      child: GridView.count(
+        crossAxisCount: 3,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+        childAspectRatio: 2.1,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        children: options.map((SelectOption option) {
+          final bool selected = selectedValues.contains(option.value);
+          return GestureDetector(
+            onTap: () => onChanged(option.value, !selected),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              decoration: BoxDecoration(
+                color: selected ? TaraTheme.primaryTint : TaraTheme.surface,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: selected ? TaraTheme.primary : TaraTheme.border,
+                  width: selected ? 1.4 : 1,
                 ),
               ),
-            )
-            .toList(),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: <Widget>[
+                  Icon(
+                    selected
+                        ? Icons.check_box_rounded
+                        : Icons.check_box_outline_blank_rounded,
+                    size: 16,
+                    color: selected
+                        ? TaraTheme.primary
+                        : TaraTheme.textSecondary,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      option.label,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: selected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                        color: selected
+                            ? TaraTheme.primaryDark
+                            : TaraTheme.textPrimary,
+                        height: 1.2,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }

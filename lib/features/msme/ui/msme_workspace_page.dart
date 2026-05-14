@@ -78,9 +78,7 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
   DateTime _testingStartDate = DateTime.now();
   final Set<String> _selectedLifestyle = <String>{};
   final Set<String> _selectedDietaryPrefs = <String>{};
-  bool _coffeeDrinker = false;
-  bool _snackConsumer = false;
-  bool _energyDrinkConsumer = false;
+  final Set<String> _selectedConsumption = <String>{};
   bool _customAttributeActionable = false;
 
   List<_StudyAttributeDraft> _attributes = <_StudyAttributeDraft>[];
@@ -358,9 +356,13 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
     _selectedDietaryPrefs
       ..clear()
       ..addAll(profile.dietaryPrefs);
-    _coffeeDrinker = profile.coffeeDrinker;
-    _snackConsumer = profile.snackConsumer;
-    _energyDrinkConsumer = profile.energyDrinkConsumer;
+    _selectedConsumption
+      ..clear()
+      ..addAll(<String>[
+        if (profile.coffeeDrinker) 'coffeeDrinker',
+        if (profile.snackConsumer) 'snackConsumer',
+        if (profile.energyDrinkConsumer) 'energyDrinkConsumer',
+      ]);
   }
 
   void _hydrateStudyForm(StudyBuilderOptionsData options) {
@@ -431,9 +433,9 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
               'occupation': _profileOccupationController.text.trim(),
               'lifestyle': _selectedLifestyle.toList(),
               'dietaryPrefs': _selectedDietaryPrefs.toList(),
-              'coffeeDrinker': _coffeeDrinker,
-              'snackConsumer': _snackConsumer,
-              'energyDrinkConsumer': _energyDrinkConsumer,
+              'coffeeDrinker': _selectedConsumption.contains('coffeeDrinker'),
+              'snackConsumer': _selectedConsumption.contains('snackConsumer'),
+              'energyDrinkConsumer': _selectedConsumption.contains('energyDrinkConsumer'),
             },
           );
 
@@ -901,9 +903,7 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
                     selectedGender: _selectedGender,
                     selectedLifestyle: _selectedLifestyle,
                     selectedDietaryPrefs: _selectedDietaryPrefs,
-                    coffeeDrinker: _coffeeDrinker,
-                    snackConsumer: _snackConsumer,
-                    energyDrinkConsumer: _energyDrinkConsumer,
+                    selectedConsumption: _selectedConsumption,
                     onRefresh: _loadProfile,
                     onLogout: () => showLogoutLoadingAndRun(
                       context,
@@ -930,14 +930,14 @@ class _MsmeWorkspacePageState extends ConsumerState<MsmeWorkspacePage> {
                         }
                       });
                     },
-                    onCoffeeChanged: (bool value) {
-                      setState(() => _coffeeDrinker = value);
-                    },
-                    onSnackChanged: (bool value) {
-                      setState(() => _snackConsumer = value);
-                    },
-                    onEnergyChanged: (bool value) {
-                      setState(() => _energyDrinkConsumer = value);
+                    onConsumptionChanged: (String value, bool selected) {
+                      setState(() {
+                        if (selected) {
+                          _selectedConsumption.add(value);
+                        } else {
+                          _selectedConsumption.remove(value);
+                        }
+                      });
                     },
                     onSave: _saveProfile,
                   ),

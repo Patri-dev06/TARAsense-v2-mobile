@@ -9,6 +9,7 @@ import 'package:tarasense_mobile/features/auth/state/auth_providers.dart';
 import 'package:tarasense_mobile/features/auth/ui/auth_loading_dialog.dart';
 import 'package:tarasense_mobile/features/fic/data/fic_api.dart';
 import 'package:tarasense_mobile/features/fic/domain/fic_models.dart';
+import 'package:tarasense_mobile/features/profile/ui/profile_tab.dart';
 
 // ─── Riverpod providers ───────────────────────────────────────────────────────
 
@@ -163,12 +164,8 @@ class _FicWorkspacePageState extends ConsumerState<FicWorkspacePage> {
               onToggleDate: _toggleAvailability,
               onRefreshAvailability: () => ref.invalidate(_ficAvailabilityProvider),
             ),
-            _FicProfileTab(
-              displayName: displayName,
-              facility: facility,
-              email: session?.user.email ?? '',
-              role: session?.user.role ?? 'FIC',
-              authBusy: authState.isBusy,
+            ProfileTab(
+              workspaceLabel: 'FIC WORKSPACE',
               onLogout: () => showLogoutLoadingAndRun(
                 context,
                 () => ref.read(authControllerProvider.notifier).logout(),
@@ -343,74 +340,6 @@ class _FicCalendarTab extends StatelessWidget {
               icon: Icons.sync_rounded,
               message: 'Loading sessions...',
             ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ─── Profile tab ──────────────────────────────────────────────────────────────
-
-class _FicProfileTab extends StatelessWidget {
-  const _FicProfileTab({
-    required this.displayName,
-    required this.facility,
-    required this.email,
-    required this.role,
-    required this.authBusy,
-    required this.onLogout,
-  });
-
-  final String displayName;
-  final String facility;
-  final String email;
-  final String role;
-  final bool authBusy;
-  final VoidCallback onLogout;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(18, 6, 18, 24),
-      children: <Widget>[
-        _FicHeader(
-          label: 'FIC WORKSPACE',
-          title: displayName,
-          subtitle: facility,
-          icon: Icons.person_outline_rounded,
-        ),
-        const SizedBox(height: 14),
-        _FicPanel(
-          title: 'Account',
-          child: Column(
-            children: <Widget>[
-              _FicProfileField(label: 'Name', value: displayName),
-              const SizedBox(height: 10),
-              _FicProfileField(label: 'Assigned Facility', value: facility),
-              const SizedBox(height: 10),
-              _FicProfileField(label: 'Email', value: email),
-              const SizedBox(height: 10),
-              _FicProfileField(label: 'Role', value: role),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: authBusy ? null : onLogout,
-                  icon: const Icon(Icons.logout_rounded),
-                  label: const Text('Log out'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: TaraTheme.roseText,
-                    backgroundColor: TaraTheme.surface,
-                    side: const BorderSide(color: Color(0xFFFECDD3)),
-                    minimumSize: const Size(0, 42),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-              ),
-            ],
           ),
         ),
       ],
@@ -1209,22 +1138,6 @@ class _CalendarLegend extends StatelessWidget {
           ).textTheme.bodySmall?.copyWith(fontSize: 9, height: 1),
         ),
       ],
-    );
-  }
-}
-
-class _FicProfileField extends StatelessWidget {
-  const _FicProfileField({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      initialValue: value.isEmpty ? '—' : value,
-      readOnly: true,
-      decoration: InputDecoration(labelText: label),
     );
   }
 }

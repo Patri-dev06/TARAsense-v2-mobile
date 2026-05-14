@@ -49,27 +49,79 @@ class StudyAnalysis {
   ]);
 
   factory StudyAnalysis.fromJson(Map<String, dynamic> json) {
+    // The API nests most analysis data inside overallLiking.
+    // Merge it with the top-level map so key lookups find fields in either place.
+    final Map<String, dynamic> ol = _asMap(json['overallLiking']);
+    final Map<String, dynamic> studyOverview = _asMap(ol['studyOverview']);
+    final Map<String, dynamic> merged = <String, dynamic>{...json, ...ol};
+
     return StudyAnalysis(
-      id: _firstString(json, const <String>['id', 'analysisId']),
-      studyId: _firstString(json, const <String>['studyId']),
-      study: StudyAnalysisStudy.fromJson(_asMap(json['study'])),
-      responseCount: _firstInt(json, const <String>[
+      id: _firstString(json, const <String>['id', 'analysisId', '_id']),
+      studyId: _firstString(json, const <String>['studyId', 'study_id']),
+      study: StudyAnalysisStudy.fromJson(<String, dynamic>{
+        'id': _firstString(json, const <String>['studyId', 'study_id', 'id']),
+        ...studyOverview,
+      }),
+      responseCount: _firstInt(merged, const <String>[
+        'n',
+        'numberOfConsumers',
         'responseCount',
         'responses',
         'totalResponses',
+        'consumerCount',
+        'participantCount',
+        'totalParticipants',
       ]),
-      generatedAt: _asDateTime(json['generatedAt']),
-      updatedAt: _asDateTime(json['updatedAt']),
-      overallLiking: _asMap(json['overallLiking']),
-      attributeStats: _mapList(json['attributeStats']),
-      penaltyAnalysis: _mapList(json['penaltyAnalysis']),
-      perSampleResults: _mapList(json['perSampleResults']),
-      comparativeAnalysis: _nullableMap(json['comparativeAnalysis']),
-      meanDropAnalysis: _mapList(json['meanDropAnalysis']),
-      automaticInterpretation: _nullableString(json['automaticInterpretation']),
-      aiInterpretation: _nullableString(json['aiInterpretation']),
-      aiRecommendation: _nullableString(json['aiRecommendation']),
-      decisionFlag: _nullableString(json['decisionFlag']),
+      generatedAt: _asDateTime(
+        studyOverview['generatedAt'] ??
+            studyOverview['dateConducted'] ??
+            json['generatedAt'] ??
+            json['createdAt'],
+      ),
+      updatedAt: _asDateTime(json['updatedAt'] ?? studyOverview['updatedAt']),
+      overallLiking: ol.isNotEmpty ? ol : _firstMapOf(json, const <String>['overall', 'overallStats']),
+      attributeStats: _mapListFirstOf(merged, const <String>[
+        'attributeStats',
+        'attributeStatistics',
+        'attributes',
+        'overallAttributeStats',
+        'globalAttributeStats',
+      ]),
+      penaltyAnalysis: _mapListFirstOf(merged, const <String>[
+        'penaltyAnalysis',
+        'penalty',
+        'jarPenalty',
+        'jarResults',
+        'jarAnalysis',
+        'overallPenalty',
+      ]),
+      perSampleResults: _mapListFirstOf(merged, const <String>[
+        'perSampleResults',
+        'bySample',
+        'samples',
+        'sampleResults',
+        'sampleTabs',
+        'perSampleTabs',
+        'sampleData',
+        'perSample',
+        'results',
+      ]),
+      comparativeAnalysis: _nullableMap(
+        merged['comparativeAnalysis'] ?? merged['comparative'],
+      ),
+      meanDropAnalysis: _mapListFirstOf(merged, const <String>[
+        'meanDropAnalysis',
+        'meanDrop',
+        'dropAnalysis',
+      ]),
+      automaticInterpretation: _nullableString(
+        merged['automaticInterpretation'] ?? merged['interpretation'],
+      ),
+      aiInterpretation: _nullableString(merged['aiInterpretation']),
+      aiRecommendation: _nullableString(
+        merged['aiRecommendation'] ?? merged['recommendation'],
+      ),
+      decisionFlag: _nullableString(merged['decisionFlag'] ?? merged['decision']),
     );
   }
 }
@@ -116,6 +168,28 @@ double analysisDouble(Map<String, dynamic> json, List<String> keys) {
     }
   }
   return 0;
+}
+
+Map<String, dynamic> _firstMapOf(
+  Map<String, dynamic> json,
+  List<String> keys,
+) {
+  for (final String key in keys) {
+    final Map<String, dynamic> m = _asMap(json[key]);
+    if (m.isNotEmpty) return m;
+  }
+  return <String, dynamic>{};
+}
+
+List<Map<String, dynamic>> _mapListFirstOf(
+  Map<String, dynamic> json,
+  List<String> keys,
+) {
+  for (final String key in keys) {
+    final List<Map<String, dynamic>> result = _mapList(json[key]);
+    if (result.isNotEmpty) return result;
+  }
+  return <Map<String, dynamic>>[];
 }
 
 Map<String, dynamic> _asMap(dynamic value) {

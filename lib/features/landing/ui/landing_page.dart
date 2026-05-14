@@ -43,7 +43,7 @@ class LandingPage extends StatelessWidget {
                     const SizedBox(height: 78),
                     const _MediaFeatureSection(
                       eyebrow: 'SIGNAL CLARITY',
-                      title: 'Video 1',
+                      title: 'Every Signal.\nOne Clear View.',
                       body:
                           'Bring concept testing, campaign performance, and brand learning into one elegant operating layer so every team can see the same truth and act faster.',
                       bullets: <String>[
@@ -52,12 +52,12 @@ class LandingPage extends StatelessWidget {
                         'AI-written decision summaries',
                       ],
                       buttonLabel: 'Explore connected workflows',
-                      visual: _ProductTrayVisual(),
+                      visual: _InsightDashboardVisual(),
                     ),
                     const SizedBox(height: 84),
                     const _MediaFeatureSection(
                       eyebrow: 'CREATIVE INTELLIGENCE',
-                      title: 'Image 1',
+                      title: 'Emotion Data.\nCreative Edge.',
                       body:
                           'Blend qualitative reactions, emotion signals, and performance forecasting into premium creative scorecards your brand team can use immediately.',
                       bullets: <String>[

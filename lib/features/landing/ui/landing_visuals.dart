@@ -12,17 +12,6 @@ class _HeroLabVisual extends StatelessWidget {
   }
 }
 
-class _ProductTrayVisual extends StatelessWidget {
-  const _ProductTrayVisual();
-
-  @override
-  Widget build(BuildContext context) {
-    return const _FramedVisual(
-      height: 360,
-      child: _ProductScene(),
-    );
-  }
-}
 
 class _SensoryBoothVisual extends StatelessWidget {
   const _SensoryBoothVisual();
@@ -214,42 +203,6 @@ class _SensoryScene extends StatelessWidget {
   }
 }
 
-class _ProductScene extends StatelessWidget {
-  const _ProductScene();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: const Color(0xFFECE9E0),
-      child: Stack(
-        children: <Widget>[
-          Positioned.fill(child: CustomPaint(painter: _GridPainter(alpha: 0.1))),
-          Positioned(
-            left: 28,
-            right: 28,
-            bottom: 44,
-            child: Container(
-              height: 32,
-              decoration: BoxDecoration(
-                color: const Color(0xFFB7B1A2),
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
-          ),
-          ...List<Widget>.generate(13, (index) {
-            final int row = index ~/ 5;
-            final int col = index % 5;
-            return Positioned(
-              left: 58.0 + (col * 76) + (row * 18),
-              bottom: 70.0 + (row * 55),
-              child: _ProductCup(index: index),
-            );
-          }),
-        ],
-      ),
-    );
-  }
-}
 
 class _BoothScene extends StatelessWidget {
   const _BoothScene();
@@ -317,53 +270,4 @@ class _PanelistSilhouette extends StatelessWidget {
   }
 }
 
-class _ProductCup extends StatelessWidget {
-  const _ProductCup({required this.index});
-
-  final int index;
-
-  @override
-  Widget build(BuildContext context) {
-    final List<Color> colors = <Color>[
-      TaraTheme.primary,
-      const Color(0xFF2452FF),
-      const Color(0xFF6D5BD0),
-      const Color(0xFF047857),
-    ];
-    return Container(
-      height: 70,
-      width: 54,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: const <BoxShadow>[
-          BoxShadow(color: Color(0x22000000), blurRadius: 12, offset: Offset(0, 6)),
-        ],
-      ),
-      child: Column(
-        children: <Widget>[
-          Container(
-            height: 12,
-            decoration: const BoxDecoration(
-              color: Color(0xFFF8F1DF),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
-            ),
-          ),
-          Expanded(
-            child: Center(
-              child: Container(
-                height: 30,
-                width: 38,
-                decoration: BoxDecoration(
-                  color: colors[index % colors.length],
-                  borderRadius: BorderRadius.circular(6),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 

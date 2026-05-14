@@ -15,17 +15,13 @@ class _ProfileTab extends StatelessWidget {
     required this.selectedGender,
     required this.selectedLifestyle,
     required this.selectedDietaryPrefs,
-    required this.coffeeDrinker,
-    required this.snackConsumer,
-    required this.energyDrinkConsumer,
+    required this.selectedConsumption,
     required this.onRefresh,
     required this.onLogout,
     required this.onGenderChanged,
     required this.onLifestyleChanged,
     required this.onDietaryChanged,
-    required this.onCoffeeChanged,
-    required this.onSnackChanged,
-    required this.onEnergyChanged,
+    required this.onConsumptionChanged,
     required this.onSave,
   });
 
@@ -42,18 +38,20 @@ class _ProfileTab extends StatelessWidget {
   final String selectedGender;
   final Set<String> selectedLifestyle;
   final Set<String> selectedDietaryPrefs;
-  final bool coffeeDrinker;
-  final bool snackConsumer;
-  final bool energyDrinkConsumer;
+  final Set<String> selectedConsumption;
   final Future<void> Function() onRefresh;
   final VoidCallback onLogout;
   final ValueChanged<String> onGenderChanged;
   final void Function(String value, bool selected) onLifestyleChanged;
   final void Function(String value, bool selected) onDietaryChanged;
-  final ValueChanged<bool> onCoffeeChanged;
-  final ValueChanged<bool> onSnackChanged;
-  final ValueChanged<bool> onEnergyChanged;
+  final void Function(String value, bool selected) onConsumptionChanged;
   final Future<void> Function() onSave;
+
+  static const List<SelectOption> _consumptionOptions = <SelectOption>[
+    SelectOption(value: 'coffeeDrinker', label: 'Coffee drinker'),
+    SelectOption(value: 'snackConsumer', label: 'Snack consumer'),
+    SelectOption(value: 'energyDrinkConsumer', label: 'Energy drink consumer'),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -162,35 +160,13 @@ class _ProfileTab extends StatelessWidget {
               onChanged: onDietaryChanged,
             ),
             const SizedBox(height: 14),
-            _SectionCard(
+            _SelectionSection(
               title: 'Consumption Behavior',
               subtitle:
                   'These details help TARAsense improve participant matching for future studies.',
-              child: Column(
-                children: <Widget>[
-                  SwitchListTile.adaptive(
-                    value: coffeeDrinker,
-                    onChanged: onCoffeeChanged,
-                    title: const Text('Coffee drinker'),
-                    activeThumbColor: TaraTheme.primary,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  SwitchListTile.adaptive(
-                    value: snackConsumer,
-                    onChanged: onSnackChanged,
-                    title: const Text('Snack consumer'),
-                    activeThumbColor: TaraTheme.primary,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  SwitchListTile.adaptive(
-                    value: energyDrinkConsumer,
-                    onChanged: onEnergyChanged,
-                    title: const Text('Energy drink consumer'),
-                    activeThumbColor: TaraTheme.primary,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ],
-              ),
+              options: _consumptionOptions,
+              selectedValues: selectedConsumption,
+              onChanged: onConsumptionChanged,
             ),
             const SizedBox(height: 14),
             _SectionCard(

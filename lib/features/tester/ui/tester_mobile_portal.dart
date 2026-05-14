@@ -4,25 +4,19 @@ class _ConsumerMobilePortal extends StatelessWidget {
   const _ConsumerMobilePortal({
     required this.currentView,
     required this.userName,
-    required this.email,
-    required this.organization,
     required this.searchController,
     required this.studiesAsync,
     required this.completedStudiesAsync,
     required this.onViewChanged,
-    required this.authBusy,
     required this.onLogout,
   });
 
   final _ConsumerView currentView;
   final String userName;
-  final String email;
-  final String? organization;
   final TextEditingController searchController;
   final AsyncValue<List<ConsumerStudy>> studiesAsync;
   final AsyncValue<List<ConsumerStudy>> completedStudiesAsync;
   final ValueChanged<_ConsumerView> onViewChanged;
-  final bool authBusy;
   final VoidCallback? onLogout;
 
   @override
@@ -30,52 +24,46 @@ class _ConsumerMobilePortal extends StatelessWidget {
     final bool showDiscover =
         currentView == _ConsumerView.dashboard ||
         currentView == _ConsumerView.availableSurveys;
+    final bool isProfileView = currentView == _ConsumerView.settings;
 
     return Scaffold(
       backgroundColor: TaraTheme.surface,
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-          children: <Widget>[
-            if (currentView == _ConsumerView.settings) ...<Widget>[
-              const _ConsumerMobileBrandHeader(),
-              const SizedBox(height: 14),
-            ] else ...<Widget>[
-              _ConsumerMobileHeader(userName: userName),
-              const SizedBox(height: 14),
-            ],
-            if (currentView != _ConsumerView.settings) ...<Widget>[
-              _ConsumerMobileFilterRail(
-                currentView: currentView,
-                onViewChanged: onViewChanged,
+      body: isProfileView
+          ? SafeArea(
+              bottom: false,
+              child: ProfileTab(
+                workspaceLabel: 'CONSUMER WORKSPACE',
+                onLogout: onLogout ?? () {},
               ),
-              const SizedBox(height: 16),
-            ],
-            if (showDiscover)
-              _ConsumerDiscoverBody(
-                searchController: searchController,
-                studiesAsync: studiesAsync,
-              )
-            else if (currentView == _ConsumerView.profile)
-              _ConsumerMobileProfileCard(userName: userName)
-            else if (currentView == _ConsumerView.completedSurveys)
-              _ConsumerCompletedBody(
-                completedStudiesAsync: completedStudiesAsync,
-                searchQuery: '',
-              )
-            else if (currentView == _ConsumerView.settings)
-              _ConsumerMobileSettingsCard(
-                userName: userName,
-                email: email,
-                organization: organization,
-                authBusy: authBusy,
-                onLogout: onLogout,
-              )
-            else
-              const _ConsumerMobileApplications(),
-          ],
-        ),
-      ),
+            )
+          : SafeArea(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+                children: <Widget>[
+                  _ConsumerMobileHeader(userName: userName),
+                  const SizedBox(height: 14),
+                  _ConsumerMobileFilterRail(
+                    currentView: currentView,
+                    onViewChanged: onViewChanged,
+                  ),
+                  const SizedBox(height: 16),
+                  if (showDiscover)
+                    _ConsumerDiscoverBody(
+                      searchController: searchController,
+                      studiesAsync: studiesAsync,
+                    )
+                  else if (currentView == _ConsumerView.profile)
+                    _ConsumerMobileProfileCard(userName: userName)
+                  else if (currentView == _ConsumerView.completedSurveys)
+                    _ConsumerCompletedBody(
+                      completedStudiesAsync: completedStudiesAsync,
+                      searchQuery: '',
+                    )
+                  else
+                    const _ConsumerMobileApplications(),
+                ],
+              ),
+            ),
       bottomNavigationBar: _ConsumerMobileNavBar(
         currentView: currentView,
         onViewChanged: onViewChanged,
@@ -172,15 +160,6 @@ class _ConsumerMobileHeader extends StatelessWidget {
   }
 }
 
-class _ConsumerMobileBrandHeader extends StatelessWidget {
-  const _ConsumerMobileBrandHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    return const _ConsumerWordmark(textSize: 24);
-  }
-}
-
 class _ConsumerMobileSearchField extends StatelessWidget {
   const _ConsumerMobileSearchField({required this.controller});
 
@@ -188,32 +167,29 @@ class _ConsumerMobileSearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 34,
-      child: TextField(
-        controller: controller,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 12),
-        decoration: InputDecoration(
-          hintText: 'Search studies...',
-          prefixIcon: const Icon(Icons.search_rounded, size: 15),
-          filled: true,
-          fillColor: const Color(0xFFF4F4F4),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 0,
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide.none,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: TaraTheme.primary),
-          ),
+    return TextField(
+      controller: controller,
+      style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 14),
+      decoration: InputDecoration(
+        hintText: 'Search studies...',
+        prefixIcon: const Icon(Icons.search_rounded, size: 18),
+        filled: true,
+        fillColor: const Color(0xFFF4F4F4),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: TaraTheme.primary, width: 1.5),
         ),
       ),
     );
@@ -240,7 +216,7 @@ class _ConsumerDiscoverBody extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         _ConsumerMobileSearchField(controller: searchController),
-        const SizedBox(height: 14),
+        const SizedBox(height: 18),
         Row(
           children: <Widget>[
             _ConsumerMobileSectionTitle('OPEN STUDIES'),
@@ -250,7 +226,7 @@ class _ConsumerDiscoverBody extends StatelessWidget {
             ],
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         _ConsumerStudyList(
           studiesAsync: studiesAsync,
           searchQuery: searchController.text,
@@ -269,7 +245,7 @@ class _ConsumerStudyCountBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: TaraTheme.primary,
         borderRadius: BorderRadius.circular(999),
@@ -278,7 +254,7 @@ class _ConsumerStudyCountBadge extends StatelessWidget {
         count.toString(),
         style: const TextStyle(
           color: Colors.white,
-          fontSize: 10,
+          fontSize: 11,
           fontWeight: FontWeight.w900,
           height: 1,
         ),
@@ -669,9 +645,9 @@ class _ConsumerMobileSectionTitle extends StatelessWidget {
       label,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
         color: TaraTheme.textPrimary,
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: FontWeight.w900,
-        letterSpacing: 0.7,
+        letterSpacing: 0.8,
         height: 1,
       ),
     );
@@ -781,325 +757,6 @@ class _ConsumerMobileNavBar extends StatelessWidget {
   }
 }
 
-class _ConsumerMobileSettingsCard extends StatelessWidget {
-  const _ConsumerMobileSettingsCard({
-    required this.userName,
-    required this.email,
-    required this.organization,
-    required this.authBusy,
-    required this.onLogout,
-  });
-
-  final String userName;
-  final String email;
-  final String? organization;
-  final bool authBusy;
-  final VoidCallback? onLogout;
-
-  @override
-  Widget build(BuildContext context) {
-    final String initials = _consumerInitials(userName);
-    final String displayName =
-        userName.trim().isEmpty ? 'Consumer' : userName.trim();
-    final String org = organization?.trim() ?? '';
-
-    return SizedBox(
-      height: MediaQuery.sizeOf(context).height - 190,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          // Gradient hero header
-          ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: <Color>[Color(0xFFFB923C), TaraTheme.primaryDark],
-                ),
-              ),
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
-              child: Row(
-                children: <Widget>[
-                  Container(
-                    height: 64,
-                    width: 64,
-                    decoration: BoxDecoration(
-                      color: const Color(0x33FFFFFF),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: const Color(0x50FFFFFF),
-                        width: 2,
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        initials,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 22,
-                          height: 1,
-                          letterSpacing: 1,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          displayName,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 18,
-                            height: 1.15,
-                            letterSpacing: -0.2,
-                          ),
-                        ),
-                        const SizedBox(height: 7),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0x33FFFFFF),
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(
-                              color: const Color(0x40FFFFFF),
-                            ),
-                          ),
-                          child: const Text(
-                            'Consumer',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 11,
-                              height: 1,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          // Info tiles card
-          Container(
-            decoration: BoxDecoration(
-              color: TaraTheme.surface,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: const <BoxShadow>[
-                BoxShadow(
-                  color: Color(0x0A0F172A),
-                  blurRadius: 12,
-                  offset: Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              children: <Widget>[
-                _ProfileInfoTile(
-                  icon: Icons.person_outline_rounded,
-                  label: 'Name',
-                  value: displayName,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(16),
-                  ),
-                ),
-                const Divider(height: 1, indent: 56),
-                _ProfileInfoTile(
-                  icon: Icons.email_outlined,
-                  label: 'Email',
-                  value: email.trim().isEmpty ? '-' : email,
-                ),
-                const Divider(height: 1, indent: 56),
-                _ProfileInfoTile(
-                  icon: Icons.verified_user_outlined,
-                  label: 'Role',
-                  value: 'Consumer',
-                  borderRadius: org.isEmpty
-                      ? const BorderRadius.vertical(
-                          bottom: Radius.circular(16),
-                        )
-                      : null,
-                ),
-                if (org.isNotEmpty) ...<Widget>[
-                  const Divider(height: 1, indent: 56),
-                  _ProfileInfoTile(
-                    icon: Icons.business_outlined,
-                    label: 'Organization',
-                    value: org,
-                    borderRadius: const BorderRadius.vertical(
-                      bottom: Radius.circular(16),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const Spacer(),
-          // Logout row
-          Container(
-            decoration: BoxDecoration(
-              color: TaraTheme.rose,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFFDA4AF)),
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: authBusy ? null : onLogout,
-                borderRadius: BorderRadius.circular(16),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                  child: Row(
-                    children: <Widget>[
-                      Container(
-                        height: 38,
-                        width: 38,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFECDD3),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(
-                          Icons.logout_rounded,
-                          color: TaraTheme.roseText,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Text(
-                              'Log out',
-                              style: Theme.of(
-                                context,
-                              ).textTheme.titleSmall?.copyWith(
-                                color: TaraTheme.roseText,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            Text(
-                              'Sign out of your account',
-                              style: Theme.of(
-                                context,
-                              ).textTheme.bodySmall?.copyWith(
-                                color: TaraTheme.roseText,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (authBusy)
-                        const SizedBox(
-                          height: 18,
-                          width: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: TaraTheme.roseText,
-                          ),
-                        )
-                      else
-                        const Icon(
-                          Icons.chevron_right_rounded,
-                          color: TaraTheme.roseText,
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ProfileInfoTile extends StatelessWidget {
-  const _ProfileInfoTile({
-    required this.icon,
-    required this.label,
-    required this.value,
-    this.borderRadius,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final BorderRadius? borderRadius;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: TaraTheme.surface,
-        borderRadius: borderRadius,
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Row(
-        children: <Widget>[
-          Container(
-            height: 36,
-            width: 36,
-            decoration: BoxDecoration(
-              color: TaraTheme.primaryTint,
-              borderRadius: BorderRadius.circular(9),
-              border: Border.all(color: const Color(0xFFFFD8B5)),
-            ),
-            child: Icon(icon, color: TaraTheme.primaryDark, size: 18),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: TaraTheme.textSecondary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    height: 1,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: TaraTheme.textPrimary,
-                    fontWeight: FontWeight.w700,
-                    height: 1.2,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _ConsumerFilterItem {
   const _ConsumerFilterItem({required this.label, required this.view});
 
@@ -1111,7 +768,7 @@ class _ConsumerFilterItem {
 String _timeGreeting(int hour) {
   if (hour >= 5 && hour < 12) return 'Good morning,';
   if (hour >= 12 && hour < 17) return 'Good afternoon,';
-  if (hour >= 17 && hour < 21) return 'Good evening,';
+  if (hour >= 17 && hour < 22) return 'Good evening,';
   return 'Good night,';
 }
 

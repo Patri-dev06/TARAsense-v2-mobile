@@ -94,15 +94,52 @@ class _HeroCopy extends StatelessWidget {
   }
 }
 
+class _FicPartner {
+  const _FicPartner({
+    required this.shortName,
+    required this.description,
+    required this.asset,
+  });
+
+  final String shortName;
+  final String description;
+  final String asset;
+}
+
 class _FicStrip extends StatefulWidget {
   const _FicStrip();
 
-  static const List<String> centers = <String>[
-    'Department of\nScience and\nTechnology -\nRegion XIII',
-    'FIC CSU Main\nCampus',
-    'FIC CSU\nCabadbaran\nCampus',
-    'FICSNSU del\nCarmen\nCampus',
-    'FIC NEMSU\nCantilan\nCampus',
+  static const List<_FicPartner> partners = <_FicPartner>[
+    _FicPartner(
+      shortName: 'DOST-XIII',
+      description: 'Dept. of Science & Technology – Region XIII',
+      asset: 'assets/images/dost-logo.png',
+    ),
+    _FicPartner(
+      shortName: 'CSU Main',
+      description: 'Caraga State University – Main Campus',
+      asset: 'assets/images/CSU-MAIN.png',
+    ),
+    _FicPartner(
+      shortName: 'CSU Cabadbaran',
+      description: 'Caraga State University – Cabadbaran',
+      asset: 'assets/images/CSU-CBR.png',
+    ),
+    _FicPartner(
+      shortName: 'SNSU',
+      description: 'Surigao del Norte State University',
+      asset: 'assets/images/SNSU.png',
+    ),
+    _FicPartner(
+      shortName: 'NEMSU',
+      description: 'N.E. Mindanao State University',
+      asset: 'assets/images/NEMSU.png',
+    ),
+    _FicPartner(
+      shortName: 'ADSSU',
+      description: 'Agusan del Sur State University',
+      asset: 'assets/images/ADSSU.png',
+    ),
   ];
 
   @override
@@ -110,181 +147,231 @@ class _FicStrip extends StatefulWidget {
 }
 
 class _FicStripState extends State<_FicStrip> {
-  static const Duration _spinInterval = Duration(seconds: 3);
+  static const int _kLoopCount = 10000;
 
-  Timer? _timer;
+  late final PageController _pageController;
   int _activeIndex = 0;
+  Timer? _timer;
+
+  int get _initialPage => _FicStrip.partners.length * (_kLoopCount ~/ 2);
 
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(_spinInterval, (_) => _showNext());
+    _pageController = PageController(
+      viewportFraction: 0.82,
+      initialPage: _initialPage,
+    );
+    _timer = Timer.periodic(const Duration(seconds: 3), (_) => _advance());
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _pageController.dispose();
     super.dispose();
   }
 
-  void _showNext() {
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _activeIndex = (_activeIndex + 1) % _FicStrip.centers.length;
-    });
+  void _advance() {
+    if (!mounted) return;
+    _pageController.nextPage(
+      duration: const Duration(milliseconds: 480),
+      curve: Curves.easeOutCubic,
+    );
   }
 
-  void _jumpTo(int index) {
-    setState(() {
-      _activeIndex = index;
-    });
+  void _jumpToLogical(int logicalIndex) {
+    if (!mounted) return;
+    final int count = _FicStrip.partners.length;
+    final int currentPage = _pageController.page?.round() ?? _initialPage;
+    final int delta = (logicalIndex - _activeIndex + count) % count;
+    _pageController.animateToPage(
+      currentPage + delta,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return _SoftPanel(
-      padding: const EdgeInsets.fromLTRB(32, 22, 32, 22),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            'FOOD INNOVATION CENTERS',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: const Color(0xFF606B82),
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0,
-                ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          'FOOD INNOVATION CENTER PARTNERS',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: const Color(0xFF606B82),
+            fontWeight: FontWeight.w800,
+            fontSize: 11,
+            letterSpacing: 0.5,
           ),
-          const SizedBox(height: 16),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final int visibleCount = constraints.maxWidth < 560
-                  ? 1
-                  : constraints.maxWidth < 900
-                      ? 2
-                      : 4;
-              const double gap = 14;
-              final double cardWidth = (constraints.maxWidth - (gap * (visibleCount - 1))) / visibleCount;
-
-              return AnimatedSwitcher(
-                duration: const Duration(milliseconds: 420),
-                switchInCurve: Curves.easeOutCubic,
-                switchOutCurve: Curves.easeInCubic,
-                transitionBuilder: (child, animation) {
-                  final Animation<Offset> offset = Tween<Offset>(
-                    begin: const Offset(0.05, 0),
-                    end: Offset.zero,
-                  ).animate(animation);
-                  return FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(position: offset, child: child),
-                  );
-                },
-                child: Row(
-                  key: ValueKey<int>(_activeIndex),
-                  children: List<Widget>.generate(visibleCount, (position) {
-                    final int centerIndex = (_activeIndex + position) % _FicStrip.centers.length;
-                    final bool isLast = position == visibleCount - 1;
-                    return Padding(
-                      padding: EdgeInsets.only(right: isLast ? 0 : gap),
-                      child: SizedBox(
-                        width: cardWidth,
-                        child: _FicCenterCard(
-                          label: _FicStrip.centers[centerIndex],
-                          faded: centerIndex == 0,
-                          highlighted: position == 0,
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Powered by DOST-XIII and its network of Food Innovation Centers across the Caraga region.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: const Color(0xFF9AA0B2),
+            height: 1.5,
+          ),
+        ),
+        const SizedBox(height: 28),
+        LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            if (constraints.maxWidth >= 720) {
+              return _FicLogoRow(partners: _FicStrip.partners);
+            }
+            final int count = _FicStrip.partners.length;
+            return Column(
+              children: <Widget>[
+                SizedBox(
+                  height: 162,
+                  child: PageView.builder(
+                    controller: _pageController,
+                    itemCount: count * _kLoopCount,
+                    onPageChanged: (int i) =>
+                        setState(() => _activeIndex = i % count),
+                    itemBuilder: (BuildContext context, int index) {
+                      final int logical = index % count;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        child: _PartnerLogoCard(
+                          partner: _FicStrip.partners[logical],
+                          highlighted: logical == _activeIndex,
                         ),
-                      ),
-                    );
-                  }),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 16),
-          Center(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: List<Widget>.generate(_FicStrip.centers.length, (index) {
-                final bool selected = index == _activeIndex;
-                return GestureDetector(
-                  onTap: () => _jumpTo(index),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 220),
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    height: 6,
-                    width: selected ? 22 : 7,
-                    decoration: BoxDecoration(
-                      color: selected ? TaraTheme.primary : const Color(0xFFD7DEEA),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
+                      );
+                    },
                   ),
-                );
-              }),
-            ),
-          ),
-        ],
-      ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List<Widget>.generate(
+                    count,
+                    (int i) {
+                      final bool sel = i == _activeIndex;
+                      return GestureDetector(
+                        onTap: () => _jumpToLogical(i),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 220),
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          height: 6,
+                          width: sel ? 22 : 7,
+                          decoration: BoxDecoration(
+                            color: sel ? TaraTheme.primary : const Color(0xFFD7DEEA),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ],
     );
   }
 }
 
-class _FicCenterCard extends StatelessWidget {
-  const _FicCenterCard({
-    required this.label,
-    this.faded = false,
+class _FicLogoRow extends StatelessWidget {
+  const _FicLogoRow({required this.partners});
+
+  final List<_FicPartner> partners;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: partners.asMap().entries.map((MapEntry<int, _FicPartner> e) {
+        final bool isLast = e.key == partners.length - 1;
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(right: isLast ? 0 : 12),
+            child: _PartnerLogoCard(partner: e.value),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _PartnerLogoCard extends StatelessWidget {
+  const _PartnerLogoCard({
+    required this.partner,
     this.highlighted = false,
   });
 
-  final String label;
-  final bool faded;
+  final _FicPartner partner;
   final bool highlighted;
 
   @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 260),
-      height: 98,
-      padding: const EdgeInsets.all(16),
+      duration: const Duration(milliseconds: 220),
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
       decoration: BoxDecoration(
         color: highlighted ? const Color(0xFFFFF7F2) : Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: highlighted ? const Color(0xFFFFB282) : TaraTheme.border),
-        boxShadow: highlighted
-            ? const <BoxShadow>[
-                BoxShadow(
-                  color: Color(0x1AFF6B1A),
-                  blurRadius: 18,
-                  offset: Offset(0, 8),
-                ),
-              ]
-            : null,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: highlighted ? const Color(0xFFFFB282) : const Color(0xFFE4EAF5),
+          width: highlighted ? 1.5 : 1,
+        ),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: highlighted
+                ? const Color(0x18FF6B1A)
+                : const Color(0x0C1A2440),
+            blurRadius: highlighted ? 22 : 10,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
-      child: Row(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          if (!faded) ...<Widget>[
-            Container(
-              height: 42,
-              width: 42,
-              decoration: BoxDecoration(
-                color: TaraTheme.primaryTint,
-                borderRadius: BorderRadius.circular(12),
+          SizedBox(
+            height: 62,
+            width: 62,
+            child: Image.asset(
+              partner.asset,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stack) => Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF4F6FA),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.account_balance_rounded,
+                  color: Color(0xFFCCD2E0),
+                  size: 28,
+                ),
               ),
-              child: const Icon(Icons.account_balance_rounded, color: TaraTheme.primaryDark),
             ),
-            const SizedBox(width: 14),
-          ],
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                color: faded ? const Color(0x331C2030) : const Color(0xFF252938),
-                fontSize: 13,
-                fontWeight: FontWeight.w900,
-                height: 1.22,
-              ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            partner.shortName,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Color(0xFF252938),
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              height: 1.2,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            partner.description,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Color(0xFF9AA0B2),
+              fontSize: 9.5,
+              height: 1.35,
             ),
           ),
         ],
@@ -422,73 +509,160 @@ class _FeatureCopy extends StatelessWidget {
 class _MemorySection extends StatelessWidget {
   const _MemorySection();
 
+  static const List<_MemoryFeatureDatum> _features = <_MemoryFeatureDatum>[
+    _MemoryFeatureDatum(
+      icon: Icons.archive_outlined,
+      title: 'Insight archives',
+      body: 'Every study, every signal, organized and searchable across your team.',
+    ),
+    _MemoryFeatureDatum(
+      icon: Icons.rule_folder_outlined,
+      title: 'Governed templates',
+      body: 'Standards that keep global teams aligned, consistent, and compliant.',
+    ),
+    _MemoryFeatureDatum(
+      icon: Icons.public_rounded,
+      title: 'Cross-market learnings',
+      body: 'Surface patterns across campaigns, regions, and time automatically.',
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final bool stack = constraints.maxWidth < 920;
-        final double titleSize = constraints.maxWidth < 520
-            ? 36
-            : constraints.maxWidth < 760
-                ? 42
-                : 48;
-        final Widget copy = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            const _Eyebrow('ENTERPRISE MEMORY'),
-            const SizedBox(height: 18),
-            Text(
-              'Turn every project into\nreusable intelligence for\nthe next launch.',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: const Color(0xFF1C2030),
-                    fontSize: titleSize,
-                    height: 1.02,
-                    letterSpacing: 0,
+    final double width = MediaQuery.sizeOf(context).width;
+    final double titleSize = width < 420 ? 34 : width < 760 ? 42 : 52;
+
+    return Column(
+      children: <Widget>[
+        _Eyebrow('ENTERPRISE MEMORY'),
+        const SizedBox(height: 18),
+        Text(
+          'Turn every project into\nreusable intelligence.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: const Color(0xFF1C2030),
+            fontSize: titleSize,
+            fontWeight: FontWeight.w800,
+            height: 1.02,
+            letterSpacing: -0.5,
+          ),
+        ),
+        const SizedBox(height: 20),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: Text(
+            'Store winning messages, rejected concepts, and demand signals in a system that keeps strategy teams aligned across markets, regions, and product lines.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: const Color(0xFF606B82),
+              fontSize: 17,
+              height: 1.75,
+            ),
+          ),
+        ),
+        const SizedBox(height: 48),
+        LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            final bool stack = constraints.maxWidth < 720;
+            if (stack) {
+              return Column(
+                children: _features
+                    .map(
+                      (_MemoryFeatureDatum f) => Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: _MemoryFeatureCard(datum: f),
+                      ),
+                    )
+                    .toList(),
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: _features.asMap().entries.map((MapEntry<int, _MemoryFeatureDatum> e) {
+                final bool isLast = e.key == _features.length - 1;
+                return Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(right: isLast ? 0 : 16),
+                    child: _MemoryFeatureCard(datum: e.value),
                   ),
+                );
+              }).toList(),
+            );
+          },
+        ),
+        const SizedBox(height: 40),
+        OutlinedButton.icon(
+          onPressed: () {},
+          iconAlignment: IconAlignment.end,
+          icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+          label: const Text('See knowledge flows'),
+          style: OutlinedButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: TaraTheme.textPrimary,
+            side: const BorderSide(color: TaraTheme.border),
+            minimumSize: const Size(240, 50),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MemoryFeatureDatum {
+  const _MemoryFeatureDatum({
+    required this.icon,
+    required this.title,
+    required this.body,
+  });
+
+  final IconData icon;
+  final String title;
+  final String body;
+}
+
+class _MemoryFeatureCard extends StatelessWidget {
+  const _MemoryFeatureCard({required this.datum});
+
+  final _MemoryFeatureDatum datum;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SoftPanel(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Container(
+            height: 44,
+            width: 44,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE9EDFF),
+              borderRadius: BorderRadius.circular(13),
             ),
-            const SizedBox(height: 24),
-            Text(
-              'Store winning messages, rejected concepts, and emerging demand signals in a system that keeps strategy teams aligned across markets, regions, and product lines.',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: const Color(0xFF606B82),
-                    fontSize: 18,
-                    height: 1.75,
-                  ),
+            child: Icon(datum.icon, color: const Color(0xFF2452FF), size: 20),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            datum.title,
+            style: const TextStyle(
+              color: Color(0xFF1C2030),
+              fontWeight: FontWeight.w800,
+              fontSize: 17,
+              letterSpacing: 0,
             ),
-            const SizedBox(height: 28),
-            const _BulletLine(text: 'Insight archives'),
-            const SizedBox(height: 14),
-            const _BulletLine(text: 'Governed templates'),
-            const SizedBox(height: 14),
-            const _BulletLine(text: 'Cross-market learnings'),
-            const SizedBox(height: 28),
-            OutlinedButton.icon(
-              onPressed: () {},
-              iconAlignment: IconAlignment.end,
-              icon: const Icon(Icons.arrow_forward_rounded),
-              label: const Text('See knowledge flows'),
-              style: OutlinedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: TaraTheme.textPrimary,
-                side: const BorderSide(color: TaraTheme.border),
-                minimumSize: const Size(240, 50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-              ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            datum.body,
+            style: const TextStyle(
+              color: Color(0xFF606B82),
+              fontSize: 14,
+              height: 1.6,
             ),
-          ],
-        );
-        const Widget visual = _InsightDashboardVisual();
-        if (stack) {
-          return Column(children: <Widget>[copy, const SizedBox(height: 30), visual]);
-        }
-        return Row(
-          children: <Widget>[
-            Expanded(child: copy),
-            const SizedBox(width: 76),
-            const Expanded(child: visual),
-          ],
-        );
-      },
+          ),
+        ],
+      ),
     );
   }
 }

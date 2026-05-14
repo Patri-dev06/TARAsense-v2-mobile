@@ -8,7 +8,6 @@ import 'package:tarasense_mobile/core/theme/tara_theme.dart';
 import 'package:tarasense_mobile/features/auth/state/auth_providers.dart';
 import 'package:tarasense_mobile/features/tester/data/consumer_studies_api.dart';
 import 'package:tarasense_mobile/features/tester/domain/consumer_study.dart';
-import 'package:tarasense_mobile/features/tester/ui/consumer_panel_entry_page.dart';
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -90,14 +89,8 @@ class _ConsumerStudyDetailPageState
         onContinue: () {
           Navigator.of(context).pop();
           context.push(
-            '/consumer/studies/${Uri.encodeComponent(widget.studyId)}/consent',
-            extra: ConsumerConsentArgs(
-              study: widget.study,
-              participantId: result.participantId,
-              panelistNumber: result.panelistNumber > 0
-                  ? result.panelistNumber
-                  : null,
-            ),
+            '/consumer/studies/${Uri.encodeComponent(widget.studyId)}/panel-entry',
+            extra: widget.study,
           );
         },
       ),
@@ -105,25 +98,10 @@ class _ConsumerStudyDetailPageState
   }
 
   void _openPanelEntry() {
-    final ConsumerStudyParticipation? participation = _myParticipation;
-    if (participation != null && participation.id.trim().isNotEmpty) {
-      // participantId already known — skip panel lookup, go straight to consent
-      context.push(
-        '/consumer/studies/${Uri.encodeComponent(widget.studyId)}/consent',
-        extra: ConsumerConsentArgs(
-          study: widget.study,
-          participantId: participation.id,
-          panelistNumber: participation.panelistNumber > 0
-              ? participation.panelistNumber
-              : null,
-        ),
-      );
-    } else {
-      context.push(
-        '/consumer/studies/${Uri.encodeComponent(widget.studyId)}/panel-entry',
-        extra: widget.study,
-      );
-    }
+    context.push(
+      '/consumer/studies/${Uri.encodeComponent(widget.studyId)}/panel-entry',
+      extra: widget.study,
+    );
   }
 
   @override

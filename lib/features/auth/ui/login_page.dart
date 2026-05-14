@@ -316,7 +316,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   ),
                 ),
                 const SizedBox(height: 18),
-                const _AuthDivider(label: 'or continue with'),
+                const _AuthDivider(label: 'or'),
                 const SizedBox(height: 18),
                 SizedBox(
                   width: double.infinity,
@@ -328,37 +328,21 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     child: const Text('Create new account'),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 20),
                 Center(
-                  child: Wrap(
-                    alignment: WrapAlignment.center,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: <Widget>[
-                      Text(
-                        'Don\'t have an account? ',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                      TextButton(
-                        onPressed: authState.isBusy || _isSubmittingLogin
-                            ? null
-                            : () => context.go('/register'),
-                        child: const Text('Sign up free'),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
+                  child: TextButton.icon(
                     onPressed: authState.isBusy || _isSubmittingLogin
                         ? null
                         : () => context.go('/'),
-                    style: _secondaryButtonStyle(
-                      foregroundColor: TaraTheme.textPrimary,
+                    style: TextButton.styleFrom(
+                      foregroundColor: TaraTheme.textSecondary,
+                      visualDensity: VisualDensity.compact,
                     ),
-                    icon: const Icon(Icons.dashboard_outlined),
-                    label: const Text('Go to main dashboard'),
+                    icon: const Icon(Icons.arrow_back_rounded, size: 14),
+                    label: const Text(
+                      'Back to home',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
                   ),
                 ),
               ],

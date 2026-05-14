@@ -117,6 +117,7 @@ class _AnalysisBody extends StatefulWidget {
 
 class _AnalysisBodyState extends State<_AnalysisBody> {
   int _selectedSample = 0;
+  int _prevSample = 0;
 
   List<Map<String, dynamic>> get _samples =>
       widget.analysis.perSampleResults;
@@ -128,13 +129,28 @@ class _AnalysisBodyState extends State<_AnalysisBody> {
 
   List<Map<String, dynamic>> get _currentAttributeStats {
     if (_hasSamples) {
-      final dynamic raw = _currentSample['attributeStats'] ??
-          _currentSample['attributes'] ??
-          _currentSample['stats'];
-      if (raw is List && raw.isNotEmpty) {
-        return raw.whereType<Map>()
-            .map((Map m) => Map<String, dynamic>.from(m))
-            .toList();
+      final List<Map<String, dynamic>> found = _listFromSample(_currentSample, const <String>[
+        'attributeLiking',
+        'attributeStats',
+        'attributeStatistics',
+        'attributes',
+        'stats',
+        'overallAttributeStats',
+        'globalAttributeStats',
+      ]);
+      if (found.isNotEmpty) {
+        // Flatten nested 'stats' sub-object: {attribute, stats:{n,mean,stdDev}}
+        // → {attribute, n, mean, stdDev, ...}
+        return found.map((Map<String, dynamic> item) {
+          final dynamic nested = item['stats'];
+          if (nested is Map) {
+            return <String, dynamic>{
+              ...item,
+              ...Map<String, dynamic>.from(nested),
+            };
+          }
+          return item;
+        }).toList();
       }
     }
     return widget.analysis.attributeStats;
@@ -142,27 +158,27 @@ class _AnalysisBodyState extends State<_AnalysisBody> {
 
   List<Map<String, dynamic>> get _currentPenalty {
     if (_hasSamples) {
-      final dynamic raw = _currentSample['penaltyAnalysis'] ??
-          _currentSample['penalty'] ??
-          _currentSample['jarPenalty'];
-      if (raw is List && raw.isNotEmpty) {
-        return raw.whereType<Map>()
-            .map((Map m) => Map<String, dynamic>.from(m))
-            .toList();
-      }
+      final List<Map<String, dynamic>> found = _listFromSample(_currentSample, const <String>[
+        'penaltyAnalysis',
+        'penalty',
+        'jarPenalty',
+        'jarResults',
+        'jarAnalysis',
+        'overallPenalty',
+      ]);
+      if (found.isNotEmpty) return found;
     }
     return widget.analysis.penaltyAnalysis;
   }
 
   List<Map<String, dynamic>> get _currentMeanDrop {
     if (_hasSamples) {
-      final dynamic raw = _currentSample['meanDropAnalysis'] ??
-          _currentSample['meanDrop'];
-      if (raw is List && raw.isNotEmpty) {
-        return raw.whereType<Map>()
-            .map((Map m) => Map<String, dynamic>.from(m))
-            .toList();
-      }
+      final List<Map<String, dynamic>> found = _listFromSample(_currentSample, const <String>[
+        'meanDropAnalysis',
+        'meanDrop',
+        'dropAnalysis',
+      ]);
+      if (found.isNotEmpty) return found;
     }
     return widget.analysis.meanDropAnalysis;
   }
@@ -184,6 +200,7 @@ class _AnalysisBodyState extends State<_AnalysisBody> {
   @override
   Widget build(BuildContext context) {
     final StudyAnalysis a = widget.analysis;
+    final String sampleLabel = _hasSamples ? _sampleLabel(_selectedSample) : '';
     return ListView(
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 32),
       children: <Widget>[
@@ -198,26 +215,65 @@ class _AnalysisBodyState extends State<_AnalysisBody> {
             count: _samples.length,
             selected: _selectedSample,
             labelOf: _sampleLabel,
-            onSelect: (int i) => setState(() => _selectedSample = i),
+            onSelect: (int i) => setState(() {
+              _prevSample = _selectedSample;
+              _selectedSample = i;
+            }),
           ),
           const SizedBox(height: 14),
         ],
-        _RadarAndStatsPanel(
-          attributeStats: _currentAttributeStats,
-          sampleLabel: _hasSamples ? _sampleLabel(_selectedSample) : '',
-        ),
-        const SizedBox(height: 14),
-        _PenaltyTablePanel(
-          rows: _currentPenalty,
-          sampleLabel: _hasSamples ? _sampleLabel(_selectedSample) : '',
-        ),
-        if (_currentMeanDrop.isNotEmpty) ...<Widget>[
-          const SizedBox(height: 14),
-          _MeanDropTablePanel(
-            rows: _currentMeanDrop,
-            sampleLabel: _hasSamples ? _sampleLabel(_selectedSample) : '',
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 280),
+          switchInCurve: Curves.easeOut,
+          switchOutCurve: Curves.easeIn,
+          layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
+            return Stack(
+              alignment: Alignment.topCenter,
+              children: <Widget>[
+                ...previousChildren,
+                ?currentChild,
+              ],
+            );
+          },
+          transitionBuilder: (Widget child, Animation<double> animation) {
+            final bool isIncoming =
+                (child.key as ValueKey<int>).value == _selectedSample;
+            final double dir = _selectedSample >= _prevSample ? 1.0 : -1.0;
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: Offset((isIncoming ? 0.04 : -0.04) * dir, 0),
+                  end: Offset.zero,
+                ).animate(
+                  CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                ),
+                child: child,
+              ),
+            );
+          },
+          child: Column(
+            key: ValueKey<int>(_selectedSample),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              if (_hasSamples) _SampleMetricsCard(sample: _currentSample),
+              if (_hasSamples) const SizedBox(height: 14),
+              _RadarAndStatsPanel(
+                attributeStats: _currentAttributeStats,
+                sampleLabel: sampleLabel,
+              ),
+              const SizedBox(height: 14),
+              _PenaltyTablePanel(rows: _currentPenalty, sampleLabel: sampleLabel),
+              if (_currentMeanDrop.isNotEmpty) ...<Widget>[
+                const SizedBox(height: 14),
+                _MeanDropTablePanel(
+                  rows: _currentMeanDrop,
+                  sampleLabel: sampleLabel,
+                ),
+              ],
+            ],
           ),
-        ],
+        ),
         const SizedBox(height: 14),
         _AiPanel(analysis: a),
       ],
@@ -495,38 +551,53 @@ class _SampleSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      child: Row(
-        children: List<Widget>.generate(count, (int i) {
-          final bool active = i == selected;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: GestureDetector(
+      child: Container(
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: TaraTheme.background,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: TaraTheme.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List<Widget>.generate(count, (int i) {
+            final bool active = i == selected;
+            return GestureDetector(
               onTap: () => onSelect(i),
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
+                  horizontal: 20,
+                  vertical: 9,
                 ),
                 decoration: BoxDecoration(
-                  color: active ? TaraTheme.textPrimary : TaraTheme.surface,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: active ? TaraTheme.textPrimary : TaraTheme.border,
-                  ),
+                  color: active ? TaraTheme.textPrimary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(9),
+                  boxShadow: active
+                      ? <BoxShadow>[
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.12),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
                 ),
-                child: Text(
-                  labelOf(i),
+                child: AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeInOut,
                   style: TextStyle(
-                    color: active ? Colors.white : TaraTheme.textPrimary,
-                    fontWeight: FontWeight.w800,
+                    color: active ? Colors.white : TaraTheme.textSecondary,
+                    fontWeight: FontWeight.w700,
                     fontSize: 13,
                   ),
+                  child: Text(labelOf(i)),
                 ),
               ),
-            ),
-          );
-        }),
+            );
+          }),
+        ),
       ),
     );
   }
@@ -767,32 +838,78 @@ class _AttributeStatsTable extends StatelessWidget {
 
   final List<Map<String, dynamic>> stats;
 
+  static const _headers = <String>['Attribute', 'Mean', 'SD', 'N'];
+
   @override
   Widget build(BuildContext context) {
     if (stats.isEmpty) return const SizedBox.shrink();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        _TableRow(
-          cells: const <String>['Attribute', 'Mean', 'SD', 'N'],
-          isHeader: true,
+    return Table(
+      columnWidths: const <int, TableColumnWidth>{
+        0: FlexColumnWidth(3),
+        1: FlexColumnWidth(2),
+        2: FlexColumnWidth(2),
+        3: FlexColumnWidth(1.5),
+      },
+      border: const TableBorder(
+        horizontalInside: BorderSide(color: Color(0xFFE5E7EB)),
+        bottom: BorderSide(color: Color(0xFFE5E7EB)),
+      ),
+      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+      children: <TableRow>[
+        TableRow(
+          decoration: const BoxDecoration(color: TaraTheme.background),
+          children: _headers.asMap().entries.map((MapEntry<int, String> e) {
+            return _cell(
+              e.value,
+              isHeader: true,
+              align: e.key == 0 ? TextAlign.start : TextAlign.right,
+            );
+          }).toList(),
         ),
-        ...stats.take(8).map(
-          (Map<String, dynamic> stat) => _TableRow(
-            cells: <String>[
-              _str(stat, const <String>[
+        ...stats.take(8).map((Map<String, dynamic> stat) {
+          return TableRow(
+            children: <Widget>[
+              _cell(_str(stat, const <String>[
                 'attribute',
                 'attributeName',
                 'name',
                 'label',
-              ]),
-              _fmt(_dbl(stat, const <String>['mean', 'average', 'score'])),
-              _fmt(_dbl(stat, const <String>['sd', 'standardDeviation', 'stdDev'])),
-              _int(stat, const <String>['n', 'count', 'responses']).toString(),
+              ])),
+              _cell(
+                _fmt(_dbl(stat, const <String>['mean', 'average', 'score'])),
+                align: TextAlign.right,
+              ),
+              _cell(
+                _fmt(_dbl(stat, const <String>['sd', 'standardDeviation', 'stdDev'])),
+                align: TextAlign.right,
+              ),
+              _cell(
+                _int(stat, const <String>['n', 'count', 'responses']).toString(),
+                align: TextAlign.right,
+              ),
             ],
-          ),
-        ),
+          );
+        }),
       ],
+    );
+  }
+
+  static Widget _cell(
+    String text, {
+    bool isHeader = false,
+    TextAlign align = TextAlign.start,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 4),
+      child: Text(
+        text,
+        textAlign: align,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: isHeader ? FontWeight.w900 : FontWeight.w500,
+          color: TaraTheme.textPrimary,
+        ),
+      ),
     );
   }
 }
@@ -833,8 +950,7 @@ class _PenaltyTablePanel extends StatelessWidget {
                   'Strong: penalty ≥ 1.0 with ≥ 20% non-JAR.',
             ),
             const SizedBox(height: 10),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
+            _HScrollView(
               child: DataTable(
                 columnSpacing: 16,
                 headingRowHeight: 36,
@@ -860,10 +976,18 @@ class _PenaltyTablePanel extends StatelessWidget {
                 ],
                 rows: rows.map((Map<String, dynamic> row) {
                   final String status = _str(row, const <String>[
+                    'driverLevel',
                     'status',
                     'driverStatus',
                     'driver',
                   ]);
+                  final double tooLowPct = _dbl(row, const <String>['tooLowPercent', 'tooLowPct']);
+                  final double tooHighPct = _dbl(row, const <String>['tooHighPercent', 'tooHighPct']);
+                  // jarPercent not returned by API; derive it
+                  double jarPct = _dbl(row, const <String>['jarPercent', 'justRightPercent', 'jarPct']);
+                  if (jarPct == 0 && (tooLowPct + tooHighPct) < 100) {
+                    jarPct = (100 - tooLowPct - tooHighPct).clamp(0, 100);
+                  }
                   return DataRow(
                     cells: <DataCell>[
                       DataCell(Text(
@@ -873,21 +997,9 @@ class _PenaltyTablePanel extends StatelessWidget {
                           'name',
                         ]),
                       )),
-                      DataCell(Text(_pct(_dbl(row, const <String>[
-                        'tooLowPercent',
-                        'tooLowPct',
-                        'tooLow',
-                      ])))),
-                      DataCell(Text(_pct(_dbl(row, const <String>[
-                        'jarPercent',
-                        'jarPct',
-                        'jar',
-                      ])))),
-                      DataCell(Text(_pct(_dbl(row, const <String>[
-                        'tooHighPercent',
-                        'tooHighPct',
-                        'tooHigh',
-                      ])))),
+                      DataCell(Text(_pct(tooLowPct))),
+                      DataCell(Text(_pct(jarPct))),
+                      DataCell(Text(_pct(tooHighPct))),
                       DataCell(Text(_fmt(_dbl(row, const <String>[
                         'tooLowPenalty',
                         'penaltyLow',
@@ -933,8 +1045,7 @@ class _MeanDropTablePanel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
+          _HScrollView(
             child: DataTable(
               columnSpacing: 16,
               headingRowHeight: 36,
@@ -967,6 +1078,7 @@ class _MeanDropTablePanel extends StatelessWidget {
                 ]);
                 final String severity = _str(row, const <String>[
                   'severity',
+                  'driverLevel',
                   'status',
                   'driverStatus',
                 ]);
@@ -1057,44 +1169,68 @@ class _AiPanel extends StatelessWidget {
   }
 }
 
-// ─── Shared small widgets ─────────────────────────────────────────────────────
+// ─── Horizontal scroll wrapper ───────────────────────────────────────────────
 
-class _TableRow extends StatelessWidget {
-  const _TableRow({required this.cells, this.isHeader = false});
+class _HScrollView extends StatefulWidget {
+  const _HScrollView({required this.child});
 
-  final List<String> cells;
-  final bool isHeader;
+  final Widget child;
+
+  @override
+  State<_HScrollView> createState() => _HScrollViewState();
+}
+
+class _HScrollViewState extends State<_HScrollView> {
+  final ScrollController _controller = ScrollController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-      decoration: BoxDecoration(
-        color: isHeader ? TaraTheme.background : null,
-        border: const Border(
-          bottom: BorderSide(color: Color(0xFFE5E7EB)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Scrollbar(
+          controller: _controller,
+          thumbVisibility: true,
+          trackVisibility: true,
+          child: SingleChildScrollView(
+            controller: _controller,
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.only(bottom: 10),
+            child: widget.child,
+          ),
         ),
-      ),
-      child: Row(
-        children: cells
-            .map(
-              (String c) => Expanded(
-                child: Text(
-                  c,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: isHeader ? FontWeight.w900 : FontWeight.w500,
-                    color: TaraTheme.textPrimary,
-                  ),
-                ),
+        const SizedBox(height: 4),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: <Widget>[
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 14,
+              color: TaraTheme.textSecondary,
+            ),
+            Text(
+              'Scroll to see more',
+              style: TextStyle(
+                fontSize: 10,
+                color: TaraTheme.textSecondary,
+                fontWeight: FontWeight.w600,
               ),
-            )
-            .toList(),
-      ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
+
+// ─── Shared small widgets ─────────────────────────────────────────────────────
+
 
 class _DriverBadge extends StatelessWidget {
   const _DriverBadge({required this.status});
@@ -1210,6 +1346,103 @@ class _AnalysisPanel extends StatelessWidget {
   }
 }
 
+// ─── Sample metrics card ──────────────────────────────────────────────────────
+
+class _SampleMetricsCard extends StatelessWidget {
+  const _SampleMetricsCard({required this.sample});
+
+  final Map<String, dynamic> sample;
+
+  @override
+  Widget build(BuildContext context) {
+    // Per-sample overallLiking is nested: { overallLiking: {n, mean, stdDev} }
+    final dynamic olRaw = sample['overallLiking'];
+    final Map<String, dynamic> ol =
+        olRaw is Map ? Map<String, dynamic>.from(olRaw) : <String, dynamic>{};
+
+    final int participants = _int(ol.isNotEmpty ? ol : sample, const <String>[
+      'n',
+      'responseCount',
+      'responses',
+      'participantCount',
+      'consumers',
+      'count',
+    ]);
+    final double meanLiking = _dbl(ol.isNotEmpty ? ol : sample, const <String>[
+      'mean',
+      'meanLiking',
+      'overallMean',
+      'likingScore',
+      'averageLiking',
+    ]);
+    final double stdDev = _dbl(ol.isNotEmpty ? ol : sample, const <String>[
+      'stdDev',
+      'sd',
+      'standardDeviation',
+    ]);
+    final String decision = _str(sample, const <String>[
+      'interpretation',
+      'decision',
+      'decisionFlag',
+      'recommendation',
+      'status',
+    ]);
+
+    final bool hasData =
+        participants > 0 || meanLiking > 0 || stdDev > 0 || decision.isNotEmpty;
+    if (!hasData) return const SizedBox.shrink();
+
+    return _AnalysisPanel(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: <Widget>[
+          if (participants > 0)
+            _MetricTile(label: 'PARTICIPANTS', value: '$participants'),
+          if (meanLiking > 0)
+            _MetricTile(label: 'MEAN LIKING', value: meanLiking.toStringAsFixed(2)),
+          if (stdDev > 0)
+            _MetricTile(label: 'STD DEV', value: stdDev.toStringAsFixed(2)),
+          if (decision.isNotEmpty)
+            _MetricTile(label: 'DECISION', value: decision),
+        ],
+      ),
+    );
+  }
+}
+
+class _MetricTile extends StatelessWidget {
+  const _MetricTile({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Text(
+          value,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w900,
+            color: TaraTheme.primaryDark,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: TaraTheme.textSecondary,
+            letterSpacing: 0.4,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 // ─── Loading / error views ────────────────────────────────────────────────────
 
 class _LoadingView extends StatelessWidget {
@@ -1282,6 +1515,22 @@ ButtonStyle get _compactOutlined => OutlinedButton.styleFrom(
       padding: const EdgeInsets.symmetric(horizontal: 14),
       textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
     );
+
+List<Map<String, dynamic>> _listFromSample(
+  Map<String, dynamic> sample,
+  List<String> keys,
+) {
+  for (final String key in keys) {
+    final dynamic raw = sample[key];
+    if (raw is List && raw.isNotEmpty) {
+      return raw
+          .whereType<Map>()
+          .map((Map m) => Map<String, dynamic>.from(m))
+          .toList();
+    }
+  }
+  return <Map<String, dynamic>>[];
+}
 
 String _str(Map<String, dynamic> json, List<String> keys) {
   for (final String key in keys) {

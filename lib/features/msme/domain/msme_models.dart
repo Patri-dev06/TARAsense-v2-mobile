@@ -347,11 +347,15 @@ class ProfileHistoryItem {
   final DateTime? completedAt;
 
   factory ProfileHistoryItem.fromJson(Map<String, dynamic> json) {
+    // API shape: { id, status, completedAt, study: { title, productName, stage } }
+    final Map<String, dynamic> study = Map<String, dynamic>.from(
+      json['study'] as Map? ?? <String, dynamic>{},
+    );
     return ProfileHistoryItem(
       id: (json['id'] ?? '').toString(),
-      studyTitle: (json['studyTitle'] ?? '').toString(),
-      productName: (json['productName'] ?? '').toString(),
-      stage: (json['stage'] ?? '').toString(),
+      studyTitle: (study['title'] ?? json['studyTitle'] ?? '').toString(),
+      productName: (study['productName'] ?? json['productName'] ?? '').toString(),
+      stage: (study['stage'] ?? json['stage'] ?? '').toString(),
       status: (json['status'] ?? '').toString(),
       completedAt: _asDateTime(json['completedAt']),
     );
@@ -427,26 +431,58 @@ class MsmeProfileData {
   final List<SelectOption> genderOptions;
 
   factory MsmeProfileData.fromJson(Map<String, dynamic> json) {
-    // Support both nested shape (header/basicInformation/preferences/options)
-    // and flat shape where fields sit directly on the root object.
-    final bool nested = json.containsKey('basicInformation');
+    // Primary shape: { user:{name,email,role,organization,createdAt},
+    //                  panelist:{age,gender,location,occupation,lifestyle,
+    //                            dietaryPrefs,consumptionHabits,joinedAt,lastActive},
+    //                  participationHistory:[...],
+    //                  options:{lifestyles,dietaryPrefs,genders} }
+    // Legacy shapes also supported (basicInformation/preferences, or flat root).
+    final bool isNewShape =
+        json.containsKey('user') && json.containsKey('panelist');
+    final bool isNestedShape =
+        !isNewShape && json.containsKey('basicInformation');
 
-    final header = nested
+    final Map<String, dynamic> user = isNewShape
+        ? Map<String, dynamic>.from(json['user'] as Map? ?? <String, dynamic>{})
+        : <String, dynamic>{};
+    final Map<String, dynamic> panelist = isNewShape
+        ? Map<String, dynamic>.from(
+            json['panelist'] as Map? ?? <String, dynamic>{},
+          )
+        : <String, dynamic>{};
+    final Map<String, dynamic> header = isNestedShape
         ? Map<String, dynamic>.from(json['header'] as Map? ?? <String, dynamic>{})
         : <String, dynamic>{};
-    final basic = nested
-        ? Map<String, dynamic>.from(json['basicInformation'] as Map? ?? <String, dynamic>{})
+    final Map<String, dynamic> basic = isNestedShape
+        ? Map<String, dynamic>.from(
+            json['basicInformation'] as Map? ?? <String, dynamic>{},
+          )
+        : isNewShape
+        ? user
         : json;
-    final preferences = nested
-        ? Map<String, dynamic>.from(json['preferences'] as Map? ?? <String, dynamic>{})
+    final Map<String, dynamic> prefs = isNestedShape
+        ? Map<String, dynamic>.from(
+            json['preferences'] as Map? ?? <String, dynamic>{},
+          )
+        : isNewShape
+        ? panelist
         : json;
-    final consumption = Map<String, dynamic>.from(
-      (nested ? preferences['consumption'] : json['consumption']) as Map? ??
+    final Map<String, dynamic> habits = Map<String, dynamic>.from(
+      (panelist['consumptionHabits'] ??
+              prefs['consumption'] ??
+              json['consumptionHabits'] ??
+              json['consumption'])
+          as Map? ??
           <String, dynamic>{},
     );
-    final options = nested
-        ? Map<String, dynamic>.from(json['options'] as Map? ?? <String, dynamic>{})
-        : json;
+    final Map<String, dynamic> options = Map<String, dynamic>.from(
+      json['options'] as Map? ?? <String, dynamic>{},
+    );
+
+    final String rawGender =
+        (panelist['gender'] ?? basic['gender'] ?? json['gender'] ?? '')
+            .toString()
+            .trim();
 
     return MsmeProfileData(
       eyebrow: (header['eyebrow'] ?? json['eyebrow'] ?? '').toString(),
@@ -454,38 +490,68 @@ class MsmeProfileData {
       subtitle: (header['subtitle'] ?? json['subtitle'] ?? '').toString(),
       name: (basic['name'] ?? '').toString(),
       email: (basic['email'] ?? '').toString(),
-      organization: (basic['organization'] ?? json['organization'] ?? '').toString(),
-      age: _asInt(basic['age']),
-      gender: (basic['gender']?.toString() ?? '').trim().isEmpty
-          ? 'PREFER_NOT_SAY'
-          : basic['gender'].toString().trim(),
-      location: (basic['location'] ?? json['location'] ?? '').toString(),
-      occupation: (basic['occupation'] ?? json['occupation'] ?? '').toString(),
+      organization:
+          (user['organization'] ??
+                  basic['organization'] ??
+                  json['organization'] ??
+                  '')
+              .toString(),
+      age: _asInt(panelist['age'] ?? basic['age'] ?? json['age']),
+      gender: rawGender.isEmpty ? 'PREFER_NOT_SAY' : rawGender,
+      location:
+          (panelist['location'] ?? basic['location'] ?? json['location'] ?? '')
+              .toString(),
+      occupation:
+          (panelist['occupation'] ??
+                  basic['occupation'] ??
+                  json['occupation'] ??
+                  '')
+              .toString(),
       lifestyle: _parseStringList(
-        preferences['lifestyle'] ?? json['lifestyle'],
+        panelist['lifestyle'] ?? prefs['lifestyle'] ?? json['lifestyle'],
       ),
       dietaryPrefs: _parseStringList(
-        preferences['dietaryPrefs'] ?? json['dietaryPrefs'],
+        panelist['dietaryPrefs'] ?? prefs['dietaryPrefs'] ?? json['dietaryPrefs'],
       ),
-      coffeeDrinker: consumption['coffeeDrinker'] == true,
-      snackConsumer: consumption['snackConsumer'] == true,
-      energyDrinkConsumer: consumption['energyDrinkConsumer'] == true,
+      coffeeDrinker: habits['coffeeDrinker'] == true,
+      snackConsumer: habits['snackConsumer'] == true,
+      energyDrinkConsumer: habits['energyDrinkConsumer'] == true,
       history: _parseHistory(
         json['participationHistory'] ?? json['history'],
       ),
-      metadata: ProfileMetadata.fromJson(
-        Map<String, dynamic>.from(
-          json['metadata'] as Map? ?? <String, dynamic>{},
+      metadata: ProfileMetadata(
+        role: (user['role'] ??
+                json['role'] ??
+                (json['metadata'] as Map?)?['role'] ??
+                '')
+            .toString(),
+        joinedAt: _asDateTime(
+          user['createdAt'] ??
+              panelist['joinedAt'] ??
+              (json['metadata'] as Map?)?['joinedAt'],
+        ),
+        panelistCreatedAt: _asDateTime(
+          panelist['joinedAt'] ??
+              (json['metadata'] as Map?)?['panelistCreatedAt'],
+        ),
+        lastActive: _asDateTime(
+          panelist['lastActive'] ?? (json['metadata'] as Map?)?['lastActive'],
         ),
       ),
       lifestyleOptions: _parseOptions(
-        options['lifestyles'] ?? options['lifestyleOptions'] ?? json['lifestyles'],
+        options['lifestyles'] ??
+            options['lifestyleOptions'] ??
+            json['lifestyles'],
       ),
       dietaryOptions: _parseOptions(
-        options['dietaryPrefs'] ?? options['dietaryOptions'] ?? json['dietaryOptions'],
+        options['dietaryPrefs'] ??
+            options['dietaryOptions'] ??
+            json['dietaryOptions'],
       ),
       genderOptions: _parseOptions(
-        options['genders'] ?? options['genderOptions'] ?? json['genders'],
+        options['genders'] ??
+            options['genderOptions'] ??
+            json['genders'],
       ),
     );
   }

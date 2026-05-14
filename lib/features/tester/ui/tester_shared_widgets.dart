@@ -1,5 +1,185 @@
 part of 'tester_workspace_page.dart';
 
+// ─── New-study notification banner ───────────────────────────────────────────
+
+class _NewStudyBannerOverlay extends StatefulWidget {
+  const _NewStudyBannerOverlay({
+    required this.count,
+    required this.onDismiss,
+    required this.onView,
+  });
+
+  final int count;
+  final VoidCallback onDismiss;
+  final VoidCallback onView;
+
+  @override
+  State<_NewStudyBannerOverlay> createState() => _NewStudyBannerOverlayState();
+}
+
+class _NewStudyBannerOverlayState extends State<_NewStudyBannerOverlay>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<Offset> _slide;
+  late final Animation<double> _fade;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 320),
+    );
+    _slide = Tween<Offset>(
+      begin: const Offset(0, -1.4),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
+    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
+    _ctrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _animateDismiss() async {
+    await _ctrl.reverse();
+    widget.onDismiss();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final String label = widget.count == 1
+        ? '1 new study is now available'
+        : '${widget.count} new studies are now available';
+
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: SafeArea(
+        bottom: false,
+        child: FadeTransition(
+          opacity: _fade,
+          child: SlideTransition(
+            position: _slide,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+              child: Material(
+                elevation: 10,
+                shadowColor: const Color(0x40F97316),
+                borderRadius: BorderRadius.circular(16),
+                clipBehavior: Clip.antiAlias,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: <Color>[Color(0xFFFB923C), TaraTheme.primaryDark],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  padding: const EdgeInsets.fromLTRB(14, 11, 8, 11),
+                  child: Row(
+                    children: <Widget>[
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: const Color(0x33FFFFFF),
+                          borderRadius: BorderRadius.circular(11),
+                          border: Border.all(color: const Color(0x33FFFFFF)),
+                        ),
+                        child: const Icon(
+                          Icons.notifications_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            const Text(
+                              'NEW STUDY AVAILABLE',
+                              style: TextStyle(
+                                color: Color(0xCCFFFFFF),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.5,
+                                height: 1,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              label,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w900,
+                                height: 1.2,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      GestureDetector(
+                        onTap: widget.onView,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 7,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0x33FFFFFF),
+                            borderRadius: BorderRadius.circular(9),
+                            border: Border.all(
+                              color: const Color(0x44FFFFFF),
+                            ),
+                          ),
+                          child: const Text(
+                            'View',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              height: 1,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 2),
+                      IconButton(
+                        onPressed: _animateDismiss,
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          size: 18,
+                          color: Colors.white,
+                        ),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 32,
+                          minHeight: 32,
+                        ),
+                        splashRadius: 16,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Shared nav / study widgets ───────────────────────────────────────────────
+
 class _ConsumerNavButton extends StatelessWidget {
   const _ConsumerNavButton({
     required this.icon,
@@ -264,7 +444,7 @@ class _ConsumerStudyList extends StatelessWidget {
             children: visibleStudies.asMap().entries.map((entry) {
               final bool isLast = entry.key == visibleStudies.length - 1;
               return Padding(
-                padding: EdgeInsets.only(bottom: isLast ? 0 : 10),
+                padding: EdgeInsets.only(bottom: isLast ? 0 : 14),
                 child: _ConsumerStudyMobileCard(study: entry.value),
               );
             }).toList(),
@@ -646,9 +826,9 @@ class _ConsumerStudyMobileRow extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        // Header: title + category tags (no icon)
+        // Header: title + category tags
         Padding(
-          padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
@@ -656,18 +836,18 @@ class _ConsumerStudyMobileRow extends StatelessWidget {
                 study.title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: textTheme.titleSmall?.copyWith(
+                style: textTheme.titleMedium?.copyWith(
                   color: TaraTheme.textPrimary,
                   fontWeight: FontWeight.w800,
-                  letterSpacing: -0.2,
-                  height: 1.15,
-                  fontSize: 13,
+                  letterSpacing: -0.3,
+                  height: 1.2,
+                  fontSize: 16,
                 ),
               ),
-              const SizedBox(height: 7),
+              const SizedBox(height: 10),
               Wrap(
-                spacing: 4,
-                runSpacing: 4,
+                spacing: 6,
+                runSpacing: 6,
                 children: <Widget>[
                   _StudyMiniTag(label: study.category),
                   if (study.stage.trim().isNotEmpty && study.stage != '-')
@@ -679,23 +859,23 @@ class _ConsumerStudyMobileRow extends StatelessWidget {
         ),
         // Schedule highlighted band
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 18),
           child: Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               color: TaraTheme.primaryTint,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: const Color(0xFFFFD8B5)),
             ),
             child: Row(
               children: <Widget>[
                 const Icon(
                   Icons.calendar_month_rounded,
-                  size: 13,
+                  size: 16,
                   color: TaraTheme.primaryDark,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     _scheduleSummary(dateLabel, timeLabel),
@@ -703,9 +883,9 @@ class _ConsumerStudyMobileRow extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: textTheme.bodySmall?.copyWith(
                       color: TaraTheme.primaryDark,
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: FontWeight.w800,
-                      height: 1.2,
+                      height: 1.3,
                     ),
                   ),
                 ),
@@ -713,10 +893,10 @@ class _ConsumerStudyMobileRow extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 8),
-        // Location meta
+        const SizedBox(height: 10),
+        // Location / owner meta
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 18),
           child: _StudyMetaLine(
             icon: Icons.place_outlined,
             label: '${study.owner} · ${_locationLabel(locationLabel)}',
@@ -724,16 +904,16 @@ class _ConsumerStudyMobileRow extends StatelessWidget {
             compact: true,
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
         // Subtle divider before footer
         const Divider(height: 1, thickness: 1, color: Color(0xFFF5E8DC)),
         // Footer: slot badge + status + action button inline
         Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
           child: Row(
             children: <Widget>[
               _StudySlotBadge(study: study, compact: true),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               _StudyStatePill(
                 label: _studyStatusLabel(study.status),
                 success: isAvailable,
@@ -741,20 +921,20 @@ class _ConsumerStudyMobileRow extends StatelessWidget {
               ),
               const Spacer(),
               SizedBox(
-                height: 36,
+                height: 42,
                 child: FilledButton.icon(
                   onPressed: onOpen,
                   style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     textStyle: const TextStyle(
-                      fontSize: 12,
+                      fontSize: 13,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  icon: const Icon(Icons.open_in_new_rounded, size: 13),
-                  label: const Text('Open Sheet'),
+                  icon: const Icon(Icons.open_in_new_rounded, size: 15),
+                  label: const Text('Open'),
                 ),
               ),
             ],
@@ -943,29 +1123,29 @@ class _ConsumerStudyMobileCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(22),
       child: Container(
         decoration: BoxDecoration(
           color: TaraTheme.surface,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(22),
           border: Border.all(color: const Color(0xFFFFD8B5)),
           boxShadow: const <BoxShadow>[
             BoxShadow(
-              color: Color(0x14F97316),
-              blurRadius: 20,
-              offset: Offset(0, 8),
+              color: Color(0x1AF97316),
+              blurRadius: 24,
+              offset: Offset(0, 10),
             ),
             BoxShadow(
-              color: Color(0x060F172A),
-              blurRadius: 4,
-              offset: Offset(0, 1),
+              color: Color(0x080F172A),
+              blurRadius: 6,
+              offset: Offset(0, 2),
             ),
           ],
         ),
         child: Column(
           children: <Widget>[
             Container(
-              height: 4,
+              height: 6,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: <Color>[Color(0xFFFB923C), TaraTheme.primaryDark],
@@ -1134,8 +1314,8 @@ class _StudyMetaLine extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: <Widget>[
-        Icon(icon, size: compact ? 11 : 13, color: color),
-        SizedBox(width: compact ? 4 : 6),
+        Icon(icon, size: compact ? 13 : 14, color: color),
+        SizedBox(width: compact ? 6 : 7),
         Expanded(
           child: Text(
             label,
@@ -1143,8 +1323,8 @@ class _StudyMetaLine extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: color,
-              fontSize: compact ? 10 : 11,
-              fontWeight: FontWeight.w800,
+              fontSize: compact ? 12 : 12,
+              fontWeight: FontWeight.w700,
               height: 1,
             ),
           ),
@@ -1164,11 +1344,11 @@ class _StudyMiniTag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(maxWidth: 110),
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      constraints: const BoxConstraints(maxWidth: 140),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: subdued ? const Color(0xFFF8FAFC) : TaraTheme.primaryTint,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: subdued ? TaraTheme.border : const Color(0xFFFFD8B5),
         ),
@@ -1179,7 +1359,7 @@ class _StudyMiniTag extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
           color: subdued ? TaraTheme.textSecondary : TaraTheme.primaryDark,
-          fontSize: 9,
+          fontSize: 11,
           fontWeight: FontWeight.w800,
           height: 1,
         ),
@@ -1198,15 +1378,15 @@ class _StudySlotBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color badgeColor = _slotBadgeColor(study);
     return ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: compact ? 86 : 110),
+      constraints: BoxConstraints(maxWidth: compact ? 100 : 120),
       child: Container(
         padding: EdgeInsets.symmetric(
-          horizontal: compact ? 7 : 9,
-          vertical: compact ? 4 : 6,
+          horizontal: compact ? 10 : 11,
+          vertical: compact ? 6 : 7,
         ),
         decoration: BoxDecoration(
           color: badgeColor,
-          borderRadius: BorderRadius.circular(7),
+          borderRadius: BorderRadius.circular(9),
         ),
         child: Text(
           _slotsLabel(study),
@@ -1214,7 +1394,7 @@ class _StudySlotBadge extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: Colors.white,
-            fontSize: compact ? 9 : 10,
+            fontSize: compact ? 11 : 12,
             fontWeight: FontWeight.w900,
             height: 1,
           ),
@@ -1459,11 +1639,11 @@ class _StudyStatePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: compact ? 92 : 120),
+      constraints: BoxConstraints(maxWidth: compact ? 110 : 130),
       child: Container(
         padding: EdgeInsets.symmetric(
-          horizontal: compact ? 8 : 10,
-          vertical: compact ? 5 : 6,
+          horizontal: compact ? 10 : 12,
+          vertical: compact ? 6 : 7,
         ),
         decoration: BoxDecoration(
           color: success ? TaraTheme.primaryTint : const Color(0xFFF4EEE7),
@@ -1478,7 +1658,7 @@ class _StudyStatePill extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             color: success ? TaraTheme.primaryDark : const Color(0xFF7C5E47),
-            fontSize: compact ? 10 : 12,
+            fontSize: compact ? 11 : 12,
             fontWeight: FontWeight.w800,
             height: 1,
           ),

@@ -261,7 +261,6 @@ class _FormPanel extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
       decoration: BoxDecoration(
         color: const Color(0xFFFDFBF8),
         borderRadius: BorderRadius.circular(32),
@@ -277,39 +276,81 @@ class _FormPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const TaraBrandLockup(
-            markSize: 18,
-            textSize: 18,
-            taraFillColor: TaraTheme.brandNavy,
-            senseColor: TaraTheme.textPrimary,
-          ),
-          const SizedBox(height: 26),
-          Text(
-            primaryLine,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-              height: 1.04,
-            ),
-          ),
-          if (accentLine.isNotEmpty) ...<Widget>[
-            Text(
-              accentLine,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: TaraTheme.primary,
-                fontWeight: FontWeight.w900,
-                height: 1.04,
+          Container(
+            padding: const EdgeInsets.fromLTRB(22, 22, 22, 26),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: <Color>[Color(0xFFFFF7F0), Color(0xFFFDF9F5)],
+              ),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(31)),
+              border: Border(
+                bottom: BorderSide(color: Color(0xFFF1E7DA)),
               ),
             ),
-          ],
-          const SizedBox(height: 10),
-          Text(
-            subtitle,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: TaraTheme.textSecondary,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: <Widget>[
+                    const TaraBrandLockup(
+                      markSize: 16,
+                      textSize: 16,
+                      taraFillColor: TaraTheme.brandNavy,
+                      senseColor: TaraTheme.textPrimary,
+                    ),
+                    const Spacer(),
+                    Container(
+                      height: 34,
+                      width: 34,
+                      decoration: BoxDecoration(
+                        color: TaraTheme.primaryTint,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFFFFD8B5)),
+                      ),
+                      child: const Icon(
+                        Icons.waving_hand_rounded,
+                        color: TaraTheme.primary,
+                        size: 17,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  primaryLine,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    height: 1.04,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                if (accentLine.isNotEmpty)
+                  Text(
+                    accentLine,
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      color: TaraTheme.primary,
+                      fontWeight: FontWeight.w900,
+                      height: 1.04,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                Text(
+                  subtitle,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: TaraTheme.textSecondary,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 24),
-          child,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(22, 24, 22, 24),
+            child: child,
+          ),
         ],
       ),
     );
