@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tarasense_mobile/core/config/app_config.dart';
+import 'package:tarasense_mobile/core/storage/onboarding_prefs.dart';
 import 'package:tarasense_mobile/features/api_test/ui/api_test_page.dart';
 import 'package:tarasense_mobile/features/admin/ui/admin_workspace_page.dart';
 import 'package:tarasense_mobile/features/auth/state/auth_providers.dart';
@@ -168,7 +169,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       if (path == '/splash') {
-        return '/login';
+        return OnboardingPrefs.hasSeenLanding ? '/login' : '/';
       }
 
       if (_isProtectedPath(path)) {

@@ -9,6 +9,7 @@ class _ConsumerMobilePortal extends StatelessWidget {
     required this.completedStudiesAsync,
     required this.onViewChanged,
     required this.onLogout,
+    required this.onScanQr,
   });
 
   final _ConsumerView currentView;
@@ -18,10 +19,11 @@ class _ConsumerMobilePortal extends StatelessWidget {
   final AsyncValue<List<ConsumerStudy>> completedStudiesAsync;
   final ValueChanged<_ConsumerView> onViewChanged;
   final VoidCallback? onLogout;
+  final VoidCallback onScanQr;
 
   @override
   Widget build(BuildContext context) {
-    final bool showDiscover =
+    final bool showDashboard =
         currentView == _ConsumerView.dashboard ||
         currentView == _ConsumerView.availableSurveys;
     final bool isProfileView = currentView == _ConsumerView.settings;
@@ -47,17 +49,11 @@ class _ConsumerMobilePortal extends StatelessWidget {
                     onViewChanged: onViewChanged,
                   ),
                   const SizedBox(height: 16),
-                  if (showDiscover)
-                    _ConsumerDiscoverBody(
+                  if (showDashboard)
+                    _ConsumerDashboardBody(
                       searchController: searchController,
                       studiesAsync: studiesAsync,
-                    )
-                  else if (currentView == _ConsumerView.profile)
-                    _ConsumerMobileProfileCard(userName: userName)
-                  else if (currentView == _ConsumerView.completedSurveys)
-                    _ConsumerCompletedBody(
                       completedStudiesAsync: completedStudiesAsync,
-                      searchQuery: '',
                     )
                   else
                     const _ConsumerMobileApplications(),
@@ -67,6 +63,7 @@ class _ConsumerMobilePortal extends StatelessWidget {
       bottomNavigationBar: _ConsumerMobileNavBar(
         currentView: currentView,
         onViewChanged: onViewChanged,
+        onScanQr: onScanQr,
       ),
     );
   }
@@ -196,18 +193,20 @@ class _ConsumerMobileSearchField extends StatelessWidget {
   }
 }
 
-class _ConsumerDiscoverBody extends StatelessWidget {
-  const _ConsumerDiscoverBody({
+class _ConsumerDashboardBody extends StatelessWidget {
+  const _ConsumerDashboardBody({
     required this.searchController,
     required this.studiesAsync,
+    required this.completedStudiesAsync,
   });
 
   final TextEditingController searchController;
   final AsyncValue<List<ConsumerStudy>> studiesAsync;
+  final AsyncValue<List<ConsumerStudy>> completedStudiesAsync;
 
   @override
   Widget build(BuildContext context) {
-    final int? count = studiesAsync.maybeWhen(
+    final int? upcomingCount = studiesAsync.maybeWhen(
       data: (s) => s.length,
       orElse: () => null,
     );
@@ -219,16 +218,24 @@ class _ConsumerDiscoverBody extends StatelessWidget {
         const SizedBox(height: 18),
         Row(
           children: <Widget>[
-            _ConsumerMobileSectionTitle('OPEN STUDIES'),
-            if (count != null && count > 0) ...<Widget>[
+            _ConsumerMobileSectionTitle('MY UPCOMING TESTS'),
+            if (upcomingCount != null && upcomingCount > 0) ...<Widget>[
               const SizedBox(width: 8),
-              _ConsumerStudyCountBadge(count: count),
+              _ConsumerStudyCountBadge(count: upcomingCount),
             ],
           ],
         ),
         const SizedBox(height: 12),
         _ConsumerStudyList(
           studiesAsync: studiesAsync,
+          searchQuery: searchController.text,
+          compact: true,
+        ),
+        const SizedBox(height: 24),
+        _ConsumerMobileSectionTitle('COMPLETED TESTS'),
+        const SizedBox(height: 12),
+        _CompletedStudyList(
+          studiesAsync: completedStudiesAsync,
           searchQuery: searchController.text,
           compact: true,
         ),
@@ -263,31 +270,6 @@ class _ConsumerStudyCountBadge extends StatelessWidget {
   }
 }
 
-class _ConsumerCompletedBody extends StatelessWidget {
-  const _ConsumerCompletedBody({
-    required this.completedStudiesAsync,
-    required this.searchQuery,
-  });
-
-  final AsyncValue<List<ConsumerStudy>> completedStudiesAsync;
-  final String searchQuery;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        _ConsumerMobileSectionTitle('COMPLETED SURVEYS'),
-        const SizedBox(height: 8),
-        _CompletedStudyList(
-          studiesAsync: completedStudiesAsync,
-          searchQuery: searchQuery,
-          compact: true,
-        ),
-      ],
-    );
-  }
-}
 
 class _ConsumerMobileFilterRail extends StatelessWidget {
   const _ConsumerMobileFilterRail({
@@ -301,14 +283,10 @@ class _ConsumerMobileFilterRail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const List<_ConsumerFilterItem> filters = <_ConsumerFilterItem>[
-      _ConsumerFilterItem(label: 'Discover', view: _ConsumerView.dashboard),
+      _ConsumerFilterItem(label: 'Dashboard', view: _ConsumerView.dashboard),
       _ConsumerFilterItem(
         label: 'My applications',
         view: _ConsumerView.roleApplications,
-      ),
-      _ConsumerFilterItem(
-        label: 'Completed',
-        view: _ConsumerView.completedSurveys,
       ),
     ];
     return SingleChildScrollView(
@@ -654,53 +632,17 @@ class _ConsumerMobileSectionTitle extends StatelessWidget {
   }
 }
 
-class _ConsumerMobileProfileCard extends StatelessWidget {
-  const _ConsumerMobileProfileCard({required this.userName});
-
-  final String userName;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: TaraTheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: TaraTheme.border),
-      ),
-      child: Row(
-        children: <Widget>[
-          CircleAvatar(
-            backgroundColor: TaraTheme.primaryTint,
-            child: Text(
-              _consumerInitials(userName),
-              style: const TextStyle(
-                color: TaraTheme.primaryDark,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              userName,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _ConsumerMobileNavBar extends StatelessWidget {
   const _ConsumerMobileNavBar({
     required this.currentView,
     required this.onViewChanged,
+    required this.onScanQr,
   });
 
   final _ConsumerView currentView;
   final ValueChanged<_ConsumerView> onViewChanged;
+  final VoidCallback onScanQr;
 
   @override
   Widget build(BuildContext context) {
@@ -717,8 +659,8 @@ class _ConsumerMobileNavBar extends StatelessWidget {
             children: <Widget>[
               Expanded(
                 child: _ConsumerMobileNavItem(
-                  icon: Icons.search_rounded,
-                  label: 'Discover',
+                  icon: Icons.grid_view_rounded,
+                  label: 'Dashboard',
                   selected:
                       currentView == _ConsumerView.dashboard ||
                       currentView == _ConsumerView.availableSurveys,
@@ -726,20 +668,7 @@ class _ConsumerMobileNavBar extends StatelessWidget {
                 ),
               ),
               Expanded(
-                child: _ConsumerMobileNavItem(
-                  icon: Icons.assignment_outlined,
-                  label: 'Applied',
-                  selected: currentView == _ConsumerView.roleApplications,
-                  onTap: () => onViewChanged(_ConsumerView.roleApplications),
-                ),
-              ),
-              Expanded(
-                child: _ConsumerMobileNavItem(
-                  icon: Icons.view_agenda_outlined,
-                  label: 'Sessions',
-                  selected: currentView == _ConsumerView.completedSurveys,
-                  onTap: () => onViewChanged(_ConsumerView.completedSurveys),
-                ),
+                child: _ConsumerMobileScanQrNavItem(onTap: onScanQr),
               ),
               Expanded(
                 child: _ConsumerMobileNavItem(
@@ -815,6 +744,49 @@ class _ConsumerMobileNavItem extends StatelessWidget {
               decoration: BoxDecoration(
                 color: selected ? TaraTheme.primary : Colors.transparent,
                 borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ConsumerMobileScanQrNavItem extends StatelessWidget {
+  const _ConsumerMobileScanQrNavItem({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: TaraTheme.primary,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(
+                Icons.qr_code_scanner_rounded,
+                color: Colors.white,
+                size: 18,
+              ),
+            ),
+            const SizedBox(height: 3),
+            const Text(
+              'Scan QR',
+              maxLines: 1,
+              style: TextStyle(
+                color: TaraTheme.primary,
+                fontSize: 8,
+                height: 1,
+                fontWeight: FontWeight.w900,
               ),
             ),
           ],

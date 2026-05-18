@@ -669,7 +669,7 @@ class _SelectionSection extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 13,
                         fontWeight:
                             selected ? FontWeight.w700 : FontWeight.w500,
                         color: selected
@@ -918,7 +918,7 @@ class _HistoryRow extends StatelessWidget {
                       child: Text(
                         _humanizeLabel(status),
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 12,
                           fontWeight: FontWeight.w700,
                           color: dot,
                           height: 1.2,
@@ -941,7 +941,7 @@ class _HistoryRow extends StatelessWidget {
                   Text(
                     'Completed ${_formatShortDate(entry.completedAt!)}',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: const Color(0xFF10B981),
                     ),

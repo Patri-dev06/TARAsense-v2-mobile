@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +10,7 @@ import 'package:tarasense_mobile/features/auth/ui/auth_loading_dialog.dart';
 import 'package:tarasense_mobile/features/profile/ui/profile_tab.dart';
 import 'package:tarasense_mobile/features/tester/data/consumer_studies_api.dart';
 import 'package:tarasense_mobile/features/tester/domain/consumer_study.dart';
+import 'package:tarasense_mobile/features/tester/ui/qr_scanner_page.dart';
 
 part 'tester_mobile_portal.dart';
 part 'tester_desktop_shell.dart';
@@ -68,6 +71,7 @@ class _TesterWorkspacePageState extends ConsumerState<TesterWorkspacePage> {
   Set<String> _seenStudyIds = <String>{};
   bool _studyFirstLoad = true;
   OverlayEntry? _bannerEntry;
+  Timer? _searchDebounce;
 
   @override
   void initState() {
@@ -77,6 +81,7 @@ class _TesterWorkspacePageState extends ConsumerState<TesterWorkspacePage> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _msmeReasonController.dispose();
@@ -116,7 +121,19 @@ class _TesterWorkspacePageState extends ConsumerState<TesterWorkspacePage> {
   }
 
   void _onSearchChanged() {
-    setState(() {});
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 200), () {
+      if (mounted) setState(() {});
+    });
+  }
+
+  void _onScanQr() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        fullscreenDialog: true,
+        builder: (_) => const QrScannerPage(),
+      ),
+    );
   }
 
   void _submitRoleApplication(String role) {
@@ -171,6 +188,7 @@ class _TesterWorkspacePageState extends ConsumerState<TesterWorkspacePage> {
                 context,
                 () => ref.read(authControllerProvider.notifier).logout(),
               ),
+        onScanQr: _onScanQr,
       );
     }
 

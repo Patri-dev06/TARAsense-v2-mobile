@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:tarasense_mobile/core/storage/onboarding_prefs.dart';
 import 'package:tarasense_mobile/core/theme/tara_theme.dart';
 import 'package:tarasense_mobile/core/widgets/dost_logo_mark.dart';
 
@@ -32,12 +33,24 @@ class LandingPage extends StatelessWidget {
       body: SafeArea(
         child: CustomScrollView(
           slivers: <Widget>[
-            SliverToBoxAdapter(child: _LandingNav(onSignIn: () => context.go('/login'))),
+            SliverToBoxAdapter(
+              child: _LandingNav(
+                onSignIn: () async {
+                  await OnboardingPrefs.markLandingSeen();
+                  if (context.mounted) context.go('/login');
+                },
+              ),
+            ),
             SliverToBoxAdapter(
               child: _PageShell(
                 child: Column(
                   children: <Widget>[
-                    _HeroSection(onGetStarted: () => context.go('/register')),
+                    _HeroSection(
+                      onGetStarted: () async {
+                        await OnboardingPrefs.markLandingSeen();
+                        if (context.mounted) context.go('/register');
+                      },
+                    ),
                     const SizedBox(height: 70),
                     const _FicStrip(),
                     const SizedBox(height: 78),
@@ -76,7 +89,12 @@ class LandingPage extends StatelessWidget {
                     const SizedBox(height: 78),
                     const _ProofSection(),
                     const SizedBox(height: 72),
-                    _CtaPanel(onGetStarted: () => context.go('/register')),
+                    _CtaPanel(
+                      onGetStarted: () async {
+                        await OnboardingPrefs.markLandingSeen();
+                        if (context.mounted) context.go('/register');
+                      },
+                    ),
                     const SizedBox(height: 60),
                   ],
                 ),

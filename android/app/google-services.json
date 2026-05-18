@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "418202487955",
+    "project_id": "tarasense-dbe04",
+    "storage_bucket": "tarasense-dbe04.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:418202487955:android:3a02ab9d9625760e8f1166",
+        "android_client_info": {
+          "package_name": "com.tarasense.tarasense_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAPP3fVJguIZKkPB2YgfmYVdSmUQrr-uEs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

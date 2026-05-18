@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tarasense_mobile/app/router.dart';
 import 'package:tarasense_mobile/core/config/app_config.dart';
 import 'package:tarasense_mobile/core/network/api_client.dart';
+import 'package:tarasense_mobile/core/notifications/notification_service.dart';
 import 'package:tarasense_mobile/core/theme/tara_theme.dart';
+import 'package:tarasense_mobile/features/auth/data/fcm_api.dart';
 import 'package:tarasense_mobile/features/auth/state/auth_providers.dart';
 import 'package:tarasense_mobile/features/auth/state/auth_state.dart';
 import 'package:tarasense_mobile/features/auth/ui/auth_loading_dialog.dart';
@@ -25,14 +27,17 @@ class _TaraSenseAppState extends ConsumerState<TaraSenseApp> {
   Set<String> _knownStudyIds = <String>{};
   _StudyAlertData? _studyAlert;
 
+  // FCM token management
+  String? _registeredFcmToken;
+  StreamSubscription<String>? _fcmTokenRefreshSub;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       _handleAuthState(ref.read(authControllerProvider));
+      _listenForNotificationTaps();
     });
   }
 
@@ -40,7 +45,62 @@ class _TaraSenseAppState extends ConsumerState<TaraSenseApp> {
   void dispose() {
     _studyPollTimer?.cancel();
     _studyAlertDismissTimer?.cancel();
+    _fcmTokenRefreshSub?.cancel();
     super.dispose();
+  }
+
+  // ─── FCM helpers ─────────────────────────────────────────────────────────────
+
+  void _listenForNotificationTaps() {
+    // App was in background and user tapped the notification.
+    NotificationService.instance.onNotificationTap.listen((_) {
+      // Navigate to dashboard so the user sees the new study.
+      ref.read(appRouterProvider).go('/consumer');
+    });
+
+    // App was fully killed and user tapped the notification to launch it.
+    NotificationService.instance.getInitialMessage().then((message) {
+      if (message != null && mounted) {
+        ref.read(appRouterProvider).go('/consumer');
+      }
+    });
+  }
+
+  Future<void> _registerFcmToken(String accessToken) async {
+    final String? token = await NotificationService.instance.getToken();
+    if (token == null || token == _registeredFcmToken) return;
+
+    _registeredFcmToken = token;
+    await ref.read(fcmApiProvider).registerToken(
+      accessToken: accessToken,
+      fcmToken: token,
+    );
+
+    // Re-register automatically whenever FCM rotates the token.
+    _fcmTokenRefreshSub?.cancel();
+    _fcmTokenRefreshSub = NotificationService.instance.onTokenRefresh.listen(
+      (newToken) async {
+        _registeredFcmToken = newToken;
+        final session = ref.read(authControllerProvider).session;
+        if (session == null) return;
+        await ref.read(fcmApiProvider).registerToken(
+          accessToken: session.tokens.accessToken,
+          fcmToken: newToken,
+        );
+      },
+    );
+  }
+
+  Future<void> _removeFcmToken(String accessToken) async {
+    final token = _registeredFcmToken;
+    if (token == null) return;
+    _registeredFcmToken = null;
+    _fcmTokenRefreshSub?.cancel();
+    _fcmTokenRefreshSub = null;
+    await ref.read(fcmApiProvider).removeToken(
+      accessToken: accessToken,
+      fcmToken: token,
+    );
   }
 
   void _handleAuthState(AuthState authState) {
@@ -51,12 +111,16 @@ class _TaraSenseAppState extends ConsumerState<TaraSenseApp> {
       return;
     }
 
+    final String accessToken = authState.session!.tokens.accessToken;
+
+    // Register FCM token for every authenticated user so all roles
+    // (Consumer, MSME, FIC) receive push notifications.
+    unawaited(_registerFcmToken(accessToken));
+
     if (!authState.session!.user.isMsme) {
       _stopStudyNotifications(clearToken: false);
       return;
     }
-
-    final String accessToken = authState.session!.tokens.accessToken;
     if (_activeToken != accessToken) {
       _activeToken = accessToken;
       _knownStudyIds = <String>{};
@@ -184,6 +248,15 @@ class _TaraSenseAppState extends ConsumerState<TaraSenseApp> {
     final router = ref.watch(appRouterProvider);
 
     ref.listen<AuthState>(authControllerProvider, (previous, next) {
+      // When the user logs out, remove the FCM token from the backend while
+      // we still have the old access token from the previous state.
+      if (previous?.status == AuthStatus.authenticated &&
+          next.status != AuthStatus.authenticated &&
+          previous?.session != null) {
+        unawaited(
+          _removeFcmToken(previous!.session!.tokens.accessToken),
+        );
+      }
       _handleAuthState(next);
     });
 
